@@ -122,11 +122,24 @@ html, body, #root {
   overflow-x: hidden;
   z-index: 20;
   animation: slideInLeft 0.5s ease-out;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
 
   /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: var(--ocean-light) transparent;
 }
+
+.controls-panel.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border-right: none !important;
+  overflow: hidden !important;
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
 
 .controls-panel::-webkit-scrollbar {
   width: 4px;
@@ -706,3 +719,30 @@ html, body, #root {
     width: 100%;
   }
 }
+
+@keyframes pulseRing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

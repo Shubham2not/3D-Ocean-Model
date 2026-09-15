@@ -3,17 +3,21 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import { useOceanStore } from '../../stores/oceanStore';
-import { fetchArgoProfile } from '../../services/api';
+import { fetchArgoProfile, fetchModelProfile } from '../../services/api';
 
 /**
  * ArgoMarkers — renders Argo float positions as 3D markers on the scene.
- * Clicking a marker fetches and displays the depth profile.
+ * Clicking a marker fetches and displays the depth profile for both observed Argo and model data.
  */
 export default function ArgoMarkers() {
   const argoFloats = useOceanStore((s) => s.argoFloats);
   const modelSlice = useOceanStore((s) => s.modelSlice);
+  const timeIndex = useOceanStore((s) => s.timeIndex);
+  const variable = useOceanStore((s) => s.variable);
+  const selectedFloat = useOceanStore((s) => s.selectedFloat);
   const setSelectedFloat = useOceanStore((s) => s.setSelectedFloat);
   const setSelectedProfile = useOceanStore((s) => s.setSelectedProfile);
+  const setModelProfile = useOceanStore((s) => s.setModelProfile);
   const setProfileOpen = useOceanStore((s) => s.setProfileOpen);
   const { invalidate } = useThree();
 
@@ -32,23 +36,33 @@ export default function ArgoMarkers() {
   const handleClick = useCallback(
     async (float_: typeof argoFloats[0]) => {
       setSelectedFloat(float_);
+      setSelectedProfile(null);
+      setModelProfile(null);
       setProfileOpen(true);
       try {
-        const profile = await fetchArgoProfile(float_.float_id, float_.latest_cycle);
+        const [profile, modelProf] = await Promise.all([
+          fetchArgoProfile(float_.float_id, float_.latest_cycle).catch((err) => {
+            console.error('Failed to fetch Argo profile:', err);
+            return null;
+          }),
+          fetchModelProfile(float_.lat, float_.lon, timeIndex, variable).catch((err) => {
+            console.error('Failed to fetch Model profile:', err);
+            return null;
+          }),
+        ]);
         setSelectedProfile(profile);
+        setModelProfile(modelProf);
       } catch (err) {
-        console.error('Failed to fetch Argo profile:', err);
+        console.error('Failed to fetch profiles:', err);
       }
       invalidate();
     },
-    [setSelectedFloat, setSelectedProfile, setProfileOpen, invalidate]
+    [setSelectedFloat, setSelectedProfile, setModelProfile, setProfileOpen, timeIndex, variable, invalidate]
   );
 
   if (!transform || argoFloats.length === 0) return null;
 
   const { latCenter, lonCenter, scaleFactor } = transform;
-
-  const selectedFloat = useOceanStore((s) => s.selectedFloat);
 
   return (
     <group>

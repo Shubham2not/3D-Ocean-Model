@@ -67,11 +67,51 @@ export interface ColorPreset {
   colors: string[];
 }
 
+/** A single depth level in the model's vertical profile */
+export interface ModelProfileLevel {
+  depth_m: number;
+  depth_index: number;
+  temperature: number;
+}
+
+/** Model depth profile at a single lat/lon point — all depth levels */
+export interface ModelProfile {
+  variable: string;
+  lat: number;
+  lon: number;
+  time: string;
+  time_index: number;
+  levels: ModelProfileLevel[];
+}
+
+export interface DataSourceLink {
+  name: string;
+  url: string;
+  description: string;
+}
+
+export interface DataSourcesResponse {
+  active_model_source: string;
+  is_real_data: boolean;
+  filename: string;
+  links: {
+    numerical_ocean_models: DataSourceLink[];
+    argo_global_data: DataSourceLink[];
+    glider_data: DataSourceLink[];
+    in_situ_collections: DataSourceLink[];
+  };
+}
+
 export interface HealthStatus {
   status: string;
 }
 
 // --- API Functions ---
+
+export async function fetchDataSources(): Promise<DataSourcesResponse> {
+  const res = await fetch(`${API_BASE}/model/sources`);
+  return res.json();
+}
 
 export async function checkHealth(): Promise<HealthStatus> {
   const res = await fetch(`${API_BASE}/health`);
@@ -136,4 +176,24 @@ export async function fetchColorPresets(): Promise<ColorPreset[]> {
   const res = await fetch(`${API_BASE}/colorbar/presets`);
   const data = await res.json();
   return data.presets;
+}
+
+/**
+ * Fetch the model's temperature depth-profile at a specific lat/lon.
+ * Returns temperature values at all depth levels for the given time step.
+ */
+export async function fetchModelProfile(
+  lat: number,
+  lon: number,
+  timeIndex: number,
+  variable: string = 'temperature',
+): Promise<ModelProfile> {
+  const params = new URLSearchParams({
+    lat: lat.toString(),
+    lon: lon.toString(),
+    time: timeIndex.toString(),
+    variable,
+  });
+  const res = await fetch(`${API_BASE}/model/profile?${params}`);
+  return res.json();
 }
