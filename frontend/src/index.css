@@ -746,3 +746,28 @@ html, body, #root {
   }
 }
 
+/* --- Cesium 3D Globe Overrides --- */
+.scene-viewer .cesium-viewer,
+.scene-viewer .cesium-viewer-cesiumWidgetContainer,
+.scene-viewer .cesium-widget,
+.scene-viewer .cesium-widget canvas {
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+}
+
+.cesium-widget-credits {
+  font-size: 10px !important;
+  opacity: 0.55;
+  bottom: 6px !important;
+  left: 12px !important;
+  z-index: 5 !important;
+}
+
+.cesium-credit-logoContainer,
+.cesium-credit-textContainer {
+  display: inline-block !important;
+  vertical-align: middle;
+}
+
+
