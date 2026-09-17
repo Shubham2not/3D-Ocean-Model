@@ -746,7 +746,9 @@ html, body, #root {
   }
 }
 
-/* --- Cesium 3D Globe Overrides --- */
+/* --- Cesium 3D Globe Overrides — Ocean Data Tool --- */
+
+/* Full-bleed canvas container */
 .scene-viewer .cesium-viewer,
 .scene-viewer .cesium-viewer-cesiumWidgetContainer,
 .scene-viewer .cesium-widget,
@@ -756,18 +758,207 @@ html, body, #root {
   touch-action: none;
 }
 
+/* Minimise credit attribution — keep legal text but tuck it away */
 .cesium-widget-credits {
-  font-size: 10px !important;
-  opacity: 0.55;
-  bottom: 6px !important;
-  left: 12px !important;
+  font-size: 9px !important;
+  opacity: 0.35 !important;
+  bottom: 4px !important;
+  right: 8px !important;
+  left: auto !important;
   z-index: 5 !important;
+  max-width: 300px;
+  text-align: right;
+  pointer-events: none;
 }
 
-.cesium-credit-logoContainer,
+.cesium-credit-logoContainer {
+  display: none !important;  /* hide the Cesium ion logo */
+}
+
 .cesium-credit-textContainer {
   display: inline-block !important;
   vertical-align: middle;
+  color: rgba(148, 163, 184, 0.4) !important;
+}
+
+.cesium-credit-textContainer a {
+  color: rgba(148, 163, 184, 0.4) !important;
+  text-decoration: none !important;
+}
+
+/* Hide any remaining Cesium toolbar/button chrome */
+.cesium-viewer-toolbar,
+.cesium-viewer-animationContainer,
+.cesium-viewer-timelineContainer,
+.cesium-viewer-bottom,
+.cesium-viewer-fullscreenContainer,
+.cesium-navigation-help,
+.cesium-baseLayerPicker-dropDown,
+.cesium-viewer-geocoderContainer {
+  display: none !important;
+}
+
+/* Remove the info box popup */
+.cesium-infoBox,
+.cesium-infoBox-iframe,
+.cesium-selection-wrapper {
+  display: none !important;
+}
+
+/* Cinematic vignette overlay — darkens edges for an ocean-depth feel */
+.scene-viewer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(5, 10, 24, 0.35) 80%,
+    rgba(5, 10, 24, 0.65) 100%
+  );
+}
+
+/* ============================================
+   Layers Panel & Layer Switcher
+   ============================================ */
+.layers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.layer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.layer-item:hover {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: rgba(78, 205, 196, 0.3);
+  transform: translateY(-1px);
+}
+
+.layer-item.active {
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.15) 0%, rgba(68, 168, 247, 0.1) 100%);
+  border-color: rgba(78, 205, 196, 0.5);
+  box-shadow: 0 2px 12px rgba(78, 205, 196, 0.15);
+}
+
+.layer-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.layer-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.layer-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.layer-desc {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+/* Radio button style */
+.custom-radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.custom-radio.checked {
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 8px rgba(78, 205, 196, 0.5);
+}
+
+.radio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.custom-radio.checked .radio-dot {
+  background: var(--accent-teal);
+}
+
+/* Checkbox style */
+.custom-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.custom-checkbox.checked {
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+  box-shadow: 0 0 8px rgba(255, 107, 53, 0.4);
+}
+
+.check-mark {
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Badges */
+.layer-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.layer-badge.volume {
+  background: rgba(167, 139, 250, 0.15);
+  border-color: rgba(167, 139, 250, 0.3);
+  color: #a78bfa;
+}
+
+.layer-badge.floats {
+  background: rgba(255, 107, 53, 0.15);
+  border-color: rgba(255, 107, 53, 0.3);
+  color: #ff8c5a;
 }
 
 

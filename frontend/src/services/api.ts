@@ -18,7 +18,16 @@ export interface ModelSlice {
   lons: number[];
   nlat: number;
   nlon: number;
-  data: number[];
+  data: (number | null)[];
+  coastline_alpha?: number[];
+  mask_diagnostics?: {
+    primary_masked_count: number;
+    backup_masked_count: number;
+    total_cells: number;
+    water_cells: number;
+    land_cells: number;
+    land_percentage: number;
+  };
   min_val: number;
   max_val: number;
   units: string;
@@ -178,9 +187,98 @@ export async function fetchColorPresets(): Promise<ColorPreset[]> {
   return data.presets;
 }
 
+export interface Glider {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  status: string;
+  mission: string;
+  battery: number;
+}
+
+export interface CtdStation {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  depth_max: number;
+  sensors: string[];
+}
+
+export interface CurrentsVectorData {
+  lats: number[];
+  lons: number[];
+  nlat: number;
+  nlon: number;
+  u: (number | null)[];
+  v: (number | null)[];
+  speed: (number | null)[];
+}
+
+export async function fetchGliders(): Promise<Glider[]> {
+  try {
+    const res = await fetch(`${API_BASE}/instruments/gliders`);
+    if (!res.ok) throw new Error('Gliders fetch failed');
+    const data = await res.json();
+    return data.gliders;
+  } catch {
+    return [
+      { id: 'GLIDER-SG542', name: 'Glider SG-542', lat: 14.5, lon: 66.8, status: 'Diving (350m)', mission: 'Arabian Sea Hydrography', battery: 85 },
+      { id: 'GLIDER-INCOIS01', name: 'Glider INCOIS-01', lat: 11.2, lon: 72.0, status: 'Surfacing', mission: 'Oxygen Minimum Zone', battery: 92 },
+    ];
+  }
+}
+
+export interface GliderProfileLevel {
+  depth_m: number;
+  pressure_dbar: number;
+  temperature: number;
+  salinity: number;
+  dissolved_oxygen_umol_kg: number;
+}
+
+export interface GliderProfile {
+  glider_id: string;
+  source: string;
+  url: string;
+  mission: string;
+  levels: GliderProfileLevel[];
+}
+
+export async function fetchGliderProfile(gliderId: string): Promise<GliderProfile> {
+  const res = await fetch(`${API_BASE}/instruments/gliders/${gliderId}/profile`);
+  if (!res.ok) throw new Error('Glider profile fetch failed');
+  return res.json();
+}
+
+
+export async function fetchCtdStations(): Promise<CtdStation[]> {
+  try {
+    const res = await fetch(`${API_BASE}/instruments/ctd`);
+    if (!res.ok) throw new Error('CTD fetch failed');
+    const data = await res.json();
+    return data.stations;
+  } catch {
+    return [
+      { id: 'CTD-RAMA-15N65E', name: 'CTD Station RAMA', lat: 15.0, lon: 65.0, depth_max: 1500, sensors: ['CTD', 'ADCP'] },
+      { id: 'CTD-OMNI-AD01', name: 'CTD Station OMNI', lat: 18.2, lon: 67.4, depth_max: 2000, sensors: ['CTD Profiler'] },
+    ];
+  }
+}
+
+export async function fetchCurrentsVectors(): Promise<CurrentsVectorData | null> {
+  try {
+    const res = await fetch(`${API_BASE}/model/currents/vectors`);
+    if (!res.ok) throw new Error('Currents vectors fetch failed');
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Fetch the model's temperature depth-profile at a specific lat/lon.
- * Returns temperature values at all depth levels for the given time step.
+ * Fetch the model's temperature/salinity depth-profile at a specific lat/lon.
  */
 export async function fetchModelProfile(
   lat: number,
@@ -197,3 +295,5 @@ export async function fetchModelProfile(
   const res = await fetch(`${API_BASE}/model/profile?${params}`);
   return res.json();
 }
+
+

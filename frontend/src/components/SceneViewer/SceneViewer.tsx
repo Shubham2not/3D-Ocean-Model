@@ -1,33 +1,45 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Viewer, type CesiumComponentRef } from 'resium';
 import * as Cesium from 'cesium';
 import type { Viewer as CesiumViewer } from 'cesium';
 import ArgoMarkers from './ArgoMarkers';
-import ColorbarLegend from './ColorbarLegend';
+import GliderMarkers from './GliderMarkers';
+import CtdMarkers from './CtdMarkers';
+import WaterBodyLabels from './WaterBodyLabels';
+import OceanDrapeLayer from './OceanDrapeLayer';
+import OceanCutawayBlock from './OceanCutawayBlock';
+import CurrentStreamlines from './CurrentStreamlines';
+import HorizontalColorbar from './HorizontalColorbar';
+import MiniGlobe from '../Minimap/MiniGlobe';
+import { sharedPerformanceManager } from './OceanVolumePrimitive';
 import { useOceanStore } from '../../stores/oceanStore';
 import { fetchArgoProfile, fetchModelProfile } from '../../services/api';
 
 /**
- * SceneViewer — 3D Earth Globe visualization powered by CesiumJS and Resium.
- *
- * Default view is focused on the Arabian Sea (lon 60-78, lat 5-25),
- * with free rotation, panning, and seamless zoom from local sea level out to global space.
+ * SceneViewer — Ocean-focused 3D Earth Globe powered by CesiumJS and Resium.
+ * Styled matching the reference image:
+ * - Oblique perspective of Indian Ocean & Arabian Sea
+ * - 3D Ocean Cutaway Block with depth profiles
+ * - Flowing surface current streamlines
+ * - Argo Float & Glider markers
+ * - Bottom-center horizontal legend & bottom-right mini-globe
  */
 export default function SceneViewer() {
   const viewerRef = useRef<CesiumComponentRef<CesiumViewer>>(null);
   const argoFloats = useOceanStore((s) => s.argoFloats);
   const timeIndex = useOceanStore((s) => s.timeIndex);
   const variable = useOceanStore((s) => s.variable);
+  const viewMode = useOceanStore((s) => s.viewMode);
+  const showArgoFloats = useOceanStore((s) => s.showArgoFloats);
   const setSelectedFloat = useOceanStore((s) => s.setSelectedFloat);
   const setSelectedProfile = useOceanStore((s) => s.setSelectedProfile);
   const setModelProfile = useOceanStore((s) => s.setModelProfile);
   const setProfileOpen = useOceanStore((s) => s.setProfileOpen);
 
-  // High-performance satellite imagery with local NaturalEarthII offline fallback
   const baseLayer = useMemo(() => {
     return Cesium.ImageryLayer.fromProviderAsync(
       Cesium.ArcGisMapServerImageryProvider.fromUrl(
-        'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
+        'https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer',
         { enablePickFeatures: false }
       ).catch(() => {
         return Cesium.TileMapServiceImageryProvider.fromUrl(
@@ -39,34 +51,64 @@ export default function SceneViewer() {
 
   const terrainProvider = useMemo(() => new Cesium.EllipsoidTerrainProvider(), []);
 
-  // Set default camera view to Arabian Sea bounding box
   useEffect(() => {
     const viewer = viewerRef.current?.cesiumElement;
     if (!viewer) return;
 
-    // Arabian Sea: lon 58-80, lat 3-27
-    const arabianSeaBounds = Cesium.Rectangle.fromDegrees(58.0, 3.0, 80.0, 27.0);
+    const globe = viewer.scene.globe;
+    const scene = viewer.scene;
 
+    scene.backgroundColor = Cesium.Color.fromCssColorString('#030712');
+
+    scene.skyAtmosphere = new Cesium.SkyAtmosphere();
+    scene.skyAtmosphere.brightnessShift = -0.15;
+    scene.skyAtmosphere.hueShift = -0.05;
+    scene.skyAtmosphere.saturationShift = 0.1;
+
+    globe.enableLighting = false;
+    globe.showGroundAtmosphere = true;
+    globe.baseColor = Cesium.Color.fromCssColorString('#06101e');
+    globe.undergroundColor = Cesium.Color.fromCssColorString('#020812');
+    globe.translucency.enabled = true;
+    globe.translucency.frontFaceAlpha = 0.88;
+    globe.translucency.backFaceAlpha = 0.88;
+
+
+    globe.depthTestAgainstTerrain = false;
+    globe.preloadAncestors = false;
+    globe.preloadSiblings = false;
+    globe.maximumScreenSpaceError = 2.5;
+    globe.tileCacheSize = 100;
+    globe.loadingDescendantLimit = 2;
+
+    scene.skyBox = undefined as unknown as Cesium.SkyBox;
+    scene.fog.enabled = true;
+    scene.fog.density = 2.0e-4;
+    scene.sun = undefined as unknown as Cesium.Sun;
+    scene.moon = undefined as unknown as Cesium.Moon;
+
+    // --- Camera: tilted perspective matching reference image ---
     viewer.camera.setView({
-      destination: arabianSeaBounds,
+      destination: Cesium.Cartesian3.fromDegrees(63.5, 3.5, 3800000),
+      orientation: {
+        heading: Cesium.Math.toRadians(18.0),
+        pitch: Cesium.Math.toRadians(-38.0),
+        roll: 0.0,
+      },
     });
 
-    // Ensure full-globe navigation is configured exactly like Google Earth
-    if (viewer.scene?.screenSpaceCameraController) {
-      viewer.scene.screenSpaceCameraController.enableRotate = true;
-      viewer.scene.screenSpaceCameraController.enableTranslate = true;
-      viewer.scene.screenSpaceCameraController.enableZoom = true;
-      viewer.scene.screenSpaceCameraController.enableTilt = true;
-      viewer.scene.screenSpaceCameraController.enableLook = true;
-      // Allow zooming from 500m sea level all the way to 35,000,000m (space whole Earth view)
-      viewer.scene.screenSpaceCameraController.minimumZoomDistance = 500;
-      viewer.scene.screenSpaceCameraController.maximumZoomDistance = 35000000;
-    }
+    const sscc = scene.screenSpaceCameraController;
+    sscc.enableRotate = true;
+    sscc.enableTranslate = true;
+    sscc.enableZoom = true;
+    sscc.enableTilt = true;
+    sscc.enableLook = true;
+    sscc.minimumZoomDistance = 500;
+    sscc.maximumZoomDistance = 35_000_000;
 
-    // Direct screen-space click listener for reliable entity picking
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    const handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
     handler.setInputAction(async (movement: { position: Cesium.Cartesian2 }) => {
-      const pickedObject = viewer.scene.pick(movement.position);
+      const pickedObject = scene.pick(movement.position);
       if (
         Cesium.defined(pickedObject) &&
         pickedObject.id &&
@@ -74,26 +116,18 @@ export default function SceneViewer() {
       ) {
         const entityId: string = pickedObject.id.id;
         if (entityId.startsWith('argo-')) {
-          const floatId = entityId.replace('argo-', '');
+          const floatId = entityId.replace('argo-', '').replace('stem-', '').replace('base-', '');
           const float_ = argoFloats.find((f) => f.float_id === floatId);
           if (float_) {
             setSelectedFloat(float_);
-            setSelectedProfile(null);
-            setModelProfile(null);
             setProfileOpen(true);
             try {
               const [profile, modelProf] = await Promise.all([
-                fetchArgoProfile(float_.float_id, float_.latest_cycle).catch((err) => {
-                  console.error('Failed to fetch Argo profile:', err);
-                  return null;
-                }),
-                fetchModelProfile(float_.lat, float_.lon, timeIndex, variable).catch((err) => {
-                  console.error('Failed to fetch Model profile:', err);
-                  return null;
-                }),
+                fetchArgoProfile(float_.float_id, float_.latest_cycle).catch(() => null),
+                fetchModelProfile(float_.lat, float_.lon, timeIndex, variable).catch(() => null),
               ]);
-              setSelectedProfile(profile);
-              setModelProfile(modelProf);
+              if (profile) setSelectedProfile(profile);
+              if (modelProf) setModelProfile(modelProf);
             } catch (err) {
               console.error('Failed to fetch profiles:', err);
             }
@@ -136,11 +170,82 @@ export default function SceneViewer() {
         fullscreenButton={false}
         homeButton={false}
       >
-        <ArgoMarkers />
+        {/* In-situ Observation Markers */}
+        {showArgoFloats && <ArgoMarkers />}
+        <GliderMarkers />
+        <CtdMarkers />
+        <WaterBodyLabels />
+
+        {/* Ocean Surface Data Layer */}
+        <OceanDrapeLayer />
+
+        {/* 3D Volumetric Ocean Cutaway Block with depth profiles */}
+        {viewMode === 'volume' && <OceanCutawayBlock />}
+
+        {/* Flowing Surface Current Streamlines */}
+        <CurrentStreamlines />
       </Viewer>
 
-      {/* HTML Overlays */}
-      <ColorbarLegend />
+      {/* Floating HTML Overlays matching reference image */}
+      <HorizontalColorbar />
+      <MiniGlobe />
+      <PerformanceIndicator />
     </div>
   );
 }
+
+
+function PerformanceIndicator() {
+  const [stats, setStats] = useState(() => sharedPerformanceManager.stats);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setStats({ ...sharedPerformanceManager.stats });
+    }, 500);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div
+      id="perf-stats-badge"
+      style={{
+        position: 'absolute',
+        bottom: 12,
+        left: 12,
+        background: 'rgba(15, 23, 42, 0.85)',
+        border: '1px solid rgba(56, 189, 248, 0.3)',
+        backdropFilter: 'blur(10px)',
+        borderRadius: 6,
+        padding: '4px 10px',
+        fontSize: 11,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        zIndex: 20,
+        pointerEvents: 'none',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+      }}
+      title="Live WebGL2 ray-marching performance metrics"
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: stats.fps >= 30 ? '#4ade80' : '#f87171',
+          boxShadow: stats.fps >= 30 ? '0 0 6px #4ade80' : '0 0 6px #f87171',
+        }}
+      />
+      <span style={{ fontWeight: 700, color: stats.fps >= 30 ? '#4ade80' : '#f87171' }}>
+        {stats.fps} FPS
+      </span>
+      <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
+      <span style={{ color: '#94a3b8' }}>{stats.stepCount} steps</span>
+      <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
+      <span style={{ color: '#38bdf8' }}>{stats.frameTimeMs}ms</span>
+    </div>
+  );
+}
+
+

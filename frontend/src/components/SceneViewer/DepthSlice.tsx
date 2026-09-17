@@ -16,7 +16,7 @@ const SELECTED_OPACITY = 1.0;
 
 // ─── texture builder ────────────────────────────────────────────────────
 function buildTextureCanvas(
-  data: number[],
+  data: (number | null)[],
   nlat: number,
   nlon: number,
   minVal: number,
@@ -34,16 +34,23 @@ function buildTextureCanvas(
   for (let i = 0; i < nlat; i++) {
     for (let j = 0; j < nlon; j++) {
       const val = data[i * nlon + j];
-      const t = Math.max(0, Math.min(1, (val - minVal) / range));
-      const css = interpolator(t);
-      const [r, g, b] = parseCssRgb(css);
-      // Flip row: API row 0 = southernmost → canvas top = northernmost
       const destRow = nlat - 1 - i;
       const idx = (destRow * nlon + j) * 4;
-      pixels[idx]     = r;
-      pixels[idx + 1] = g;
-      pixels[idx + 2] = b;
-      pixels[idx + 3] = 255;
+
+      if (val === null || val === undefined || isNaN(val)) {
+        pixels[idx]     = 0;
+        pixels[idx + 1] = 0;
+        pixels[idx + 2] = 0;
+        pixels[idx + 3] = 0;
+      } else {
+        const t = Math.max(0, Math.min(1, (val - minVal) / range));
+        const css = interpolator(t);
+        const [r, g, b] = parseCssRgb(css);
+        pixels[idx]     = r;
+        pixels[idx + 1] = g;
+        pixels[idx + 2] = b;
+        pixels[idx + 3] = 255;
+      }
     }
   }
   ctx.putImageData(imgData, 0, 0);

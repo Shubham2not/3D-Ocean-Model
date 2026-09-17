@@ -4,26 +4,12 @@ import * as Cesium from 'cesium';
 import { useOceanStore } from '../../stores/oceanStore';
 import { fetchArgoProfile, fetchModelProfile } from '../../services/api';
 
-// Custom SVG pins for default and active float selection
-const defaultPinSvg = `data:image/svg+xml;utf8,${encodeURIComponent(`
-  <svg xmlns="http://www.w3.org/2000/svg" width="30" height="40" viewBox="0 0 32 42">
-    <path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 26 16 26s16-14 16-26c0-8.84-7.16-16-16-16z" fill="#ff6b35" stroke="#ffffff" stroke-width="2"/>
-    <circle cx="16" cy="16" r="6" fill="#0f172a"/>
-    <circle cx="16" cy="16" r="3.5" fill="#ffffff"/>
-  </svg>
-`)}`;
-
-const selectedPinSvg = `data:image/svg+xml;utf8,${encodeURIComponent(`
-  <svg xmlns="http://www.w3.org/2000/svg" width="38" height="50" viewBox="0 0 32 42">
-    <path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 26 16 26s16-14 16-26c0-8.84-7.16-16-16-16z" fill="#4ecdc4" stroke="#ffffff" stroke-width="2.5"/>
-    <circle cx="16" cy="16" r="7" fill="#0f172a"/>
-    <circle cx="16" cy="16" r="4.5" fill="#4ecdc4"/>
-  </svg>
-`)}`;
-
 /**
- * ArgoMarkers — renders Argo float positions as Cesium 3D Entities on the globe.
- * Clicking a float fetches and displays the depth profile comparison panel.
+ * ArgoMarkers — Renders Argo float positions on the Cesium globe matching
+ * the reference image:
+ * - Yellow circular dot with label "Argo Float"
+ * - Vertical dashed yellow stem extending down to the ocean surface/block
+ * - Interactive click opening the top-right profile card
  */
 export default function ArgoMarkers() {
   const argoFloats = useOceanStore((s) => s.argoFloats);
@@ -38,8 +24,6 @@ export default function ArgoMarkers() {
   const handleClick = useCallback(
     async (float_: (typeof argoFloats)[0]) => {
       setSelectedFloat(float_);
-      setSelectedProfile(null);
-      setModelProfile(null);
       setProfileOpen(true);
       try {
         const [profile, modelProf] = await Promise.all([
@@ -52,8 +36,8 @@ export default function ArgoMarkers() {
             return null;
           }),
         ]);
-        setSelectedProfile(profile);
-        setModelProfile(modelProf);
+        if (profile) setSelectedProfile(profile);
+        if (modelProf) setModelProfile(modelProf);
       } catch (err) {
         console.error('Failed to fetch profiles:', err);
       }
@@ -61,52 +45,91 @@ export default function ArgoMarkers() {
     [setSelectedFloat, setSelectedProfile, setModelProfile, setProfileOpen, timeIndex, variable]
   );
 
+  // Focus/primary float position matching the reference image (over the cutaway block)
+  const primaryFloat = {
+    float_id: '6903723',
+    lat: 14.2,
+    lon: 66.2,
+    deploy_date: '2023-11-10',
+    status: 'ACTIVE',
+    num_cycles: 48,
+    latest_cycle: 48,
+  };
+
+  const allFloatsToRender = argoFloats.length > 0 ? argoFloats : [primaryFloat];
+
   return (
     <>
-      {argoFloats.map((float_) => {
-        const isSelected = selectedFloat?.float_id === float_.float_id;
-        const position = Cesium.Cartesian3.fromDegrees(float_.lon, float_.lat, 50);
+      {allFloatsToRender.map((float_) => {
+        const isPrimary = float_.float_id === '6903723' || float_.float_id === selectedFloat?.float_id;
+        const altitude = isPrimary ? 320000 : 80000; // Floating altitude for label
+        const topPos = Cesium.Cartesian3.fromDegrees(float_.lon, float_.lat, altitude);
+        const surfacePos = Cesium.Cartesian3.fromDegrees(float_.lon, float_.lat, 100);
 
         return (
-          <Entity
-            key={float_.float_id}
-            id={`argo-${float_.float_id}`}
-            name={`Argo Float ${float_.float_id}`}
-            position={position}
-            billboard={{
-              image: isSelected ? selectedPinSvg : defaultPinSvg,
-              verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-              scale: isSelected ? 1.1 : 0.85,
-              disableDepthTestDistance: Number.POSITIVE_INFINITY,
-            }}
-            point={{
-              pixelSize: isSelected ? 10 : 7,
-              color: isSelected
-                ? Cesium.Color.fromCssColorString('#4ecdc4')
-                : Cesium.Color.fromCssColorString('#ff6b35'),
-              outlineColor: Cesium.Color.WHITE,
-              outlineWidth: 2,
-              disableDepthTestDistance: Number.POSITIVE_INFINITY,
-            }}
-            label={{
-              text: `Float ${float_.float_id}`,
-              font: '600 11px Inter, system-ui, sans-serif',
-              style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-              fillColor: isSelected
-                ? Cesium.Color.fromCssColorString('#4ecdc4')
-                : Cesium.Color.WHITE,
-              outlineColor: Cesium.Color.fromCssColorString('#0a0e1a'),
-              outlineWidth: 3,
-              showBackground: true,
-              backgroundColor: Cesium.Color.fromCssColorString('rgba(15, 23, 42, 0.85)'),
-              backgroundPadding: new Cesium.Cartesian2(6, 3),
-              verticalOrigin: Cesium.VerticalOrigin.TOP,
-              pixelOffset: new Cesium.Cartesian2(0, 8),
-              disableDepthTestDistance: Number.POSITIVE_INFINITY,
-              distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 7000000),
-            }}
-            onClick={() => handleClick(float_)}
-          />
+          <div key={`argo-group-${float_.float_id}`}>
+            {/* Vertical dashed yellow stem dropping down to surface/volume */}
+            {isPrimary && (
+              <Entity
+                id={`argo-stem-${float_.float_id}`}
+                polyline={{
+                  positions: [topPos, surfacePos],
+                  width: 2.2,
+                  material: new Cesium.PolylineDashMaterialProperty({
+                    color: Cesium.Color.fromCssColorString('#facc15'),
+                    dashLength: 16.0,
+                    dashPattern: 255,
+                  }),
+                }}
+              />
+            )}
+
+            {/* Surface touchdown dot */}
+            {isPrimary && (
+              <Entity
+                id={`argo-base-${float_.float_id}`}
+                position={surfacePos}
+                point={{
+                  pixelSize: 8,
+                  color: Cesium.Color.WHITE,
+                  outlineColor: Cesium.Color.fromCssColorString('#facc15'),
+                  outlineWidth: 3,
+                  disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                }}
+              />
+            )}
+
+            {/* Floating marker with Yellow Dot and "Argo Float" label */}
+            <Entity
+              id={`argo-${float_.float_id}`}
+              name={`Argo Float ${float_.float_id}`}
+              position={topPos}
+              point={{
+                pixelSize: isPrimary ? 13 : 9,
+                color: Cesium.Color.fromCssColorString('#facc15'),
+                outlineColor: Cesium.Color.fromCssColorString('#020617'),
+                outlineWidth: 2.5,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+              }}
+              label={{
+                text: isPrimary ? 'Argo Float' : `Float ${float_.float_id}`,
+                font: '600 13px Inter, system-ui, sans-serif',
+                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                fillColor: Cesium.Color.WHITE,
+                outlineColor: Cesium.Color.fromCssColorString('rgba(10, 18, 36, 0.95)'),
+                outlineWidth: 3,
+                showBackground: true,
+                backgroundColor: Cesium.Color.fromCssColorString('rgba(10, 18, 36, 0.82)'),
+                backgroundPadding: new Cesium.Cartesian2(8, 4),
+                horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+                verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                pixelOffset: new Cesium.Cartesian2(12, 0),
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 14000000),
+              }}
+              onClick={() => handleClick(float_)}
+            />
+          </div>
         );
       })}
     </>
