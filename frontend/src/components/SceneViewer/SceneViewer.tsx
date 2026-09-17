@@ -11,7 +11,7 @@ import OceanCutawayBlock from './OceanCutawayBlock';
 import CurrentStreamlines from './CurrentStreamlines';
 import HorizontalColorbar from './HorizontalColorbar';
 import MiniGlobe from '../Minimap/MiniGlobe';
-import { sharedPerformanceManager } from './OceanVolumePrimitive';
+import { sharedPerformanceManager } from '../../utils/performanceManager';
 import { useOceanStore } from '../../stores/oceanStore';
 import { fetchArgoProfile, fetchModelProfile } from '../../services/api';
 
