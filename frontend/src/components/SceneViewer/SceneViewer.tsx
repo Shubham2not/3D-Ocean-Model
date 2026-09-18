@@ -153,6 +153,33 @@ export default function SceneViewer() {
     setProfileOpen,
   ]);
 
+  useEffect(() => {
+    const viewer = viewerRef.current?.cesiumElement;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    if (viewMode === 'slice') {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(68.5, 5.0, 2200000),
+        orientation: {
+          heading: Cesium.Math.toRadians(4.0),
+          pitch: Cesium.Math.toRadians(-40.0),
+          roll: 0.0,
+        },
+        duration: 1.0,
+      });
+    } else if (viewMode === 'volume') {
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(63.5, 3.5, 3800000),
+        orientation: {
+          heading: Cesium.Math.toRadians(18.0),
+          pitch: Cesium.Math.toRadians(-38.0),
+          roll: 0.0,
+        },
+        duration: 1.0,
+      });
+    }
+  }, [viewMode]);
+
   return (
     <div
       className="scene-viewer"
@@ -182,7 +209,7 @@ export default function SceneViewer() {
 
         <OceanDrapeLayer />
 
-        {viewMode === 'volume' && <OceanCutawayBlock />}
+        {(viewMode === 'volume' || viewMode === 'slice') && <OceanCutawayBlock />}
 
         <CurrentStreamlines />
       </Viewer>

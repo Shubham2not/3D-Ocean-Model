@@ -153,6 +153,38 @@ export default function OceanCutawayBlock() {
           }}
         />
       ))}
+
+      <Entity
+        name={`Horizontal Depth Slice (${selectedDepth}m)`}
+        polygon={{
+          hierarchy: Cesium.Cartesian3.fromDegreesArray([
+            west, south,
+            east, south,
+            east, north,
+            west, north,
+          ]),
+          height: -depthMeters,
+          material: new Cesium.ColorMaterialProperty(
+            Cesium.Color.fromCssColorString(interpolator(Math.exp(-Math.min(1, selectedDepth / 1000) * 2.5))).withAlpha(0.85)
+          ),
+          outline: true,
+          outlineColor: Cesium.Color.fromCssColorString('#38bdf8'),
+        }}
+      />
+
+      <Entity
+        position={Cesium.Cartesian3.fromDegrees(west + 0.6, south + 0.6, -depthMeters + 20000)}
+        label={{
+          text: `Depth Slice: ${selectedDepth} m`,
+          font: 'bold 13px sans-serif',
+          fillColor: Cesium.Color.fromCssColorString('#38bdf8'),
+          backgroundColor: Cesium.Color.fromCssColorString('#020617').withAlpha(0.85),
+          showBackground: true,
+          horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          disableDepthTestDistance: Number.POSITIVE_INFINITY,
+        }}
+      />
     </>
   );
 }
