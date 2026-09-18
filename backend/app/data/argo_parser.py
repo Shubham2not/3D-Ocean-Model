@@ -1,17 +1,3 @@
-"""
-Ocean3D — Real Argo NetCDF / ASCII Profile Parser
-
-Parses in-situ observational profiling float data following the
-Ifremer Global Data Assembly Centre (GDAC) Argo format (Argo User Manual 3.1).
-
-Supports:
-- Real Argo NetCDF profile files (*_prof.nc, *<float_id>_<cycle>.nc)
-  Extracting PRES, TEMP, PSAL, LATITUDE, LONGITUDE, CYCLE_NUMBER, PLATFORM_NUMBER.
-- Real Argo ASCII / CSV exchange formats.
-- Generates standard GDAC compliant NetCDF sample files if none exist in the data folder.
-- Transparent automatic fallback to synthetic generator if data is unavailable or parsing fails.
-"""
-
 import os
 import glob
 from typing import Dict, Any, List, Optional
@@ -20,7 +6,6 @@ import numpy as np
 ARGO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "argo"))
 
 _CACHED_ARGO_DATA: Optional[Dict[str, Any]] = None
-
 
 def _create_sample_gdac_netcdf(filepath: str, float_id: str, lat: float, lon: float, cycle: int) -> None:
     """
@@ -31,7 +16,7 @@ def _create_sample_gdac_netcdf(filepath: str, float_id: str, lat: float, lon: fl
 
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with nc.Dataset(filepath, "w", format="NETCDF4") as ds:
-            # Global Attributes
+
             ds.title = "Argo float vertical profile"
             ds.institution = "INCOIS / Ifremer GDAC"
             ds.source = "Argo float"
@@ -40,14 +25,12 @@ def _create_sample_gdac_netcdf(filepath: str, float_id: str, lat: float, lon: fl
             ds.format_version = "3.1"
             ds.references = "ftp://ftp.ifremer.fr/ifremer/argo"
 
-            # Dimensions
             n_prof = 1
             n_levels = 19
             ds.createDimension("N_PROF", n_prof)
             ds.createDimension("N_LEVELS", n_levels)
             ds.createDimension("STRING8", 8)
 
-            # Variables
             v_plat = ds.createVariable("PLATFORM_NUMBER", "c", ("N_PROF", "STRING8"))
             v_cycle = ds.createVariable("CYCLE_NUMBER", "i4", ("N_PROF",))
             v_lat = ds.createVariable("LATITUDE", "f4", ("N_PROF",))
@@ -60,7 +43,6 @@ def _create_sample_gdac_netcdf(filepath: str, float_id: str, lat: float, lon: fl
             v_temp.units = "degree_Celsius"
             v_psal.units = "psu"
 
-            # Fill platform characters
             char_arr = np.full((1, 8), " ", dtype="c")
             for idx_c, ch in enumerate(float_id[:8]):
                 char_arr[0, idx_c] = ch
@@ -71,7 +53,7 @@ def _create_sample_gdac_netcdf(filepath: str, float_id: str, lat: float, lon: fl
 
             pres_vals = np.array([5, 10, 20, 30, 50, 75, 100, 150, 200, 300, 400, 500,
                                   600, 800, 1000, 1200, 1500, 1800, 2000], dtype=np.float32)
-            # Physical tropical Arabian Sea thermocline profile
+
             surf_t = 29.8 - (lat - 5.0) * 0.15
             temp_vals = []
             psal_vals = []
@@ -99,7 +81,6 @@ def _create_sample_gdac_netcdf(filepath: str, float_id: str, lat: float, lon: fl
     except Exception as e:
         print(f"[Argo Parser] Warning: Could not generate sample Argo NetCDF: {e}")
 
-
 def parse_argo_netcdf(filepath: str) -> Optional[Dict[str, Any]]:
     """
     Parses an authentic Ifremer GDAC Argo NetCDF profile file.
@@ -108,7 +89,7 @@ def parse_argo_netcdf(filepath: str) -> Optional[Dict[str, Any]]:
     import netCDF4 as nc
 
     with nc.Dataset(filepath, "r") as ds:
-        # Extract Platform Number (WMO ID)
+
         float_id = None
         if "PLATFORM_NUMBER" in ds.variables:
             try:
@@ -127,7 +108,6 @@ def parse_argo_netcdf(filepath: str) -> Optional[Dict[str, Any]]:
             basename = os.path.basename(filepath)
             float_id = basename.split("_")[0].split(".")[0]
 
-        # Extract cycle number
         cycle_num = 1
         if "CYCLE_NUMBER" in ds.variables:
             c_val = ds.variables["CYCLE_NUMBER"][:]
@@ -138,7 +118,6 @@ def parse_argo_netcdf(filepath: str) -> Optional[Dict[str, Any]]:
             except Exception:
                 cycle_num = 1
 
-        # Extract coordinates
         lat = 15.0
         lon = 65.0
         if "LATITUDE" in ds.variables:
@@ -153,7 +132,6 @@ def parse_argo_netcdf(filepath: str) -> Optional[Dict[str, Any]]:
                 ln_val = ln_val.filled(65.0)
             lon = round(float(ln_val[0]), 2)
 
-        # Extract pressure, temperature, salinity
         pres = ds.variables.get("PRES")
         temp = ds.variables.get("TEMP")
         psal = ds.variables.get("PSAL")
@@ -179,11 +157,10 @@ def parse_argo_netcdf(filepath: str) -> Optional[Dict[str, Any]]:
             t = float(t_vals[i])
             s = float(s_vals[i])
 
-            # Filter fill values, NaNs & invalid measurements
             if np.isfinite(p) and np.isfinite(t) and np.isfinite(s):
                 if 0 < p < 10000 and -5 < t < 40 and 10 < s < 50:
                     pressures.append(round(p, 1))
-                    depths.append(int(round(p)))  # 1 dbar ≈ 1 meter
+                    depths.append(int(round(p)))
                     temperatures.append(round(t, 3))
                     salinities.append(round(s, 3))
 
@@ -199,8 +176,6 @@ def parse_argo_netcdf(filepath: str) -> Optional[Dict[str, Any]]:
             "salinity": salinities,
         }
 
-
-
 def load_real_argo_data() -> Dict[str, Any]:
     """
     Scans ARGO_DIR for GDAC NetCDF files and parses all profiles.
@@ -209,7 +184,6 @@ def load_real_argo_data() -> Dict[str, Any]:
     os.makedirs(ARGO_DIR, exist_ok=True)
     nc_files = glob.glob(os.path.join(ARGO_DIR, "*.nc*"))
 
-    # If empty, create realistic sample profiles for key Arabian Sea floats
     if not nc_files:
         sample_floats = [
             ("2902150", 12.5, 65.3, 3),
@@ -252,8 +226,6 @@ def load_real_argo_data() -> Dict[str, Any]:
         except Exception as e:
             print(f"[Argo Parser] Could not parse {fpath}: {e}")
 
-    # If parsing succeeded for at least one float, also mix in synthetic floats
-    # to maintain full Arabian Sea basin coverage if fewer than 6 floats exist
     from app.data.generate_argo_data import get_argo_data as get_synthetic_argo
     synth_data = get_synthetic_argo()
 
@@ -261,7 +233,7 @@ def load_real_argo_data() -> Dict[str, Any]:
         fid = sf["float_id"]
         if fid not in floats_map:
             floats_map[fid] = sf
-            # Add synthetic profiles as well
+
             for k, p in synth_data["profiles"].items():
                 if k.startswith(f"{fid}_"):
                     profiles[k] = p
@@ -272,7 +244,6 @@ def load_real_argo_data() -> Dict[str, Any]:
         "source": "Real Ifremer GDAC NetCDF (with synthetic basin padding)",
         "is_real_data": True,
     }
-
 
 def get_argo_data() -> Dict[str, Any]:
     """

@@ -1,10 +1,5 @@
-"""
-Pydantic schemas for ocean model endpoints.
-"""
-
 from typing import List
 from pydantic import BaseModel, Field
-
 
 class VariableInfo(BaseModel):
     name: str = Field(..., description="Variable identifier name")
@@ -13,29 +8,23 @@ class VariableInfo(BaseModel):
     dims: List[str] = Field(..., description="Dimension order of dataset")
     available: bool = Field(..., description="Whether variable is available in API")
 
-
 class VariablesResponse(BaseModel):
     variables: List[VariableInfo]
-
 
 class TimeStepItem(BaseModel):
     index: int = Field(..., description="0-based timestep index")
     label: str = Field(..., description="ISO 8601 timestamp string")
 
-
 class TimestepsResponse(BaseModel):
     variable: str
     timesteps: List[TimeStepItem]
-
 
 class DepthItem(BaseModel):
     index: int = Field(..., description="0-based depth level index")
     depth_m: int = Field(..., description="Depth in meters")
 
-
 class DepthsResponse(BaseModel):
     depths: List[DepthItem]
-
 
 class ModelSliceResponse(BaseModel):
     variable: str = Field(..., description="Variable name (e.g. temperature)")

@@ -1,13 +1,6 @@
-"""
-Ocean3D — Colorbar Presets API Router
-
-Serves available color palette presets for the frontend colorbar editor.
-"""
-
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/v1/colorbar", tags=["Colorbar"])
-
 
 @router.get("/presets")
 async def get_colorbar_presets():

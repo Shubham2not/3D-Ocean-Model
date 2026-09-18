@@ -83,7 +83,7 @@ export default function OutreachGuide() {
         animation: 'slideUpFade 0.3s ease',
       }}
     >
-      {/* Header */}
+
       <div
         style={{
           display: 'flex',
@@ -125,7 +125,6 @@ export default function OutreachGuide() {
         </button>
       </div>
 
-      {/* Title */}
       <h4
         style={{
           margin: '0 0 8px',
@@ -137,7 +136,6 @@ export default function OutreachGuide() {
         {currentStep.title}
       </h4>
 
-      {/* Description */}
       <p
         style={{
           margin: '0 0 14px',
@@ -149,7 +147,6 @@ export default function OutreachGuide() {
         {currentStep.explanation}
       </p>
 
-      {/* Action button if present */}
       {currentStep.action && (
         <button
           onClick={currentStep.action}
@@ -172,7 +169,6 @@ export default function OutreachGuide() {
         </button>
       )}
 
-      {/* Footer Navigation */}
       <div
         style={{
           display: 'flex',

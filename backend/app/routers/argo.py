@@ -1,17 +1,9 @@
-"""
-Ocean3D — Argo Instruments API Router
-
-Endpoints for querying synthetic Argo float positions and depth profiles.
-Matches the API design from section 11 of the SIH brief.
-"""
-
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
 
 from app.data.argo_parser import get_argo_data
 
 router = APIRouter(prefix="/api/v1/instruments", tags=["Instruments"])
-
 
 @router.get("/argo")
 async def list_argo_floats(
@@ -33,7 +25,7 @@ async def list_argo_floats(
                 if lon_min <= f["lon"] <= lon_max and lat_min <= f["lat"] <= lat_max
             ]
         except (ValueError, IndexError):
-            pass  # Fall back to all floats
+            pass
 
     return {
         "count": len(floats),
@@ -41,8 +33,6 @@ async def list_argo_floats(
         "is_real_data": argo.get("is_real_data", True),
         "floats": floats,
     }
-
-
 
 @router.get("/argo/{float_id}/profile/{cycle}")
 async def get_argo_profile(float_id: str, cycle: int):
@@ -76,7 +66,6 @@ async def get_argo_profile(float_id: str, cycle: int):
             for i in range(len(profile["depths"]))
         ],
     }
-
 
 @router.get("/gliders")
 async def list_gliders():
@@ -122,7 +111,6 @@ async def list_gliders():
         ],
     }
 
-
 @router.get("/gliders/{glider_id}/profile")
 async def get_glider_profile(glider_id: str):
     """
@@ -131,7 +119,7 @@ async def get_glider_profile(glider_id: str):
     """
     depths = [0, 20, 50, 80, 120, 160, 220, 300, 400, 550, 700, 850, 1000]
     profile_levels = []
-    
+
     for d in depths:
         if d <= 50:
             temp = 28.6 - (d / 50.0) * 1.2
@@ -140,7 +128,7 @@ async def get_glider_profile(glider_id: str):
         elif d <= 200:
             temp = 27.4 - ((d - 50.0) / 150.0) * 12.0
             sal = 36.2 - ((d - 50.0) / 150.0) * 0.6
-            o2 = 180.0 - ((d - 50.0) / 150.0) * 150.0  # OMZ drop
+            o2 = 180.0 - ((d - 50.0) / 150.0) * 150.0
         elif d <= 500:
             temp = 15.4 - ((d - 200.0) / 300.0) * 5.8
             sal = 35.6 - ((d - 200.0) / 300.0) * 0.5
@@ -165,8 +153,6 @@ async def get_glider_profile(glider_id: str):
         "mission": "Arabian Sea Hydrography Transect",
         "levels": profile_levels,
     }
-
-
 
 @router.get("/ctd")
 async def list_ctd_stations():

@@ -129,7 +129,7 @@ export default function ArgoFullProfileModal() {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -178,7 +178,6 @@ export default function ArgoFullProfileModal() {
           </button>
         </div>
 
-        {/* Source Citation Banner */}
         <div
           style={{
             background: 'rgba(56, 189, 248, 0.08)',
@@ -214,7 +213,6 @@ export default function ArgoFullProfileModal() {
           </a>
         </div>
 
-        {/* Float metadata pill row */}
         <div
           style={{
             display: 'grid',
@@ -243,7 +241,6 @@ export default function ArgoFullProfileModal() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 8 }}>
           <button
             onClick={() => setActiveTab('temp')}
@@ -292,7 +289,6 @@ export default function ArgoFullProfileModal() {
           </button>
         </div>
 
-        {/* Tab Content */}
         <div style={{ height: 320, width: '100%', overflowY: activeTab === 'table' ? 'auto' : 'hidden' }}>
           {activeTab === 'temp' && <Line data={tempChartData} options={chartOptions('Temperature (°C)', 2, 32)} />}
           {activeTab === 'sal' && <Line data={salChartData} options={chartOptions('Salinity (PSU)', 34, 37)} />}
@@ -326,7 +322,6 @@ export default function ArgoFullProfileModal() {
           )}
         </div>
 
-        {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <button
             onClick={() => setFullProfileModalOpen(false)}

@@ -2,14 +2,6 @@ import { useRef, useEffect, useMemo } from 'react';
 import { useOceanStore } from '../../stores/oceanStore';
 import { getInterpolator, parseCssRgb } from '../../utils/colorUtils';
 
-/**
- * HorizontalColorbar — Bottom-center horizontal legend matching the reference image.
- *
- * Renders:
- * - A sleek horizontal gradient canvas bar
- * - Scale numbers: 5, 10, 15, 20, 25, 30 (or dynamically tuned to variable range)
- * - Variable title: "Temperature (°C)", "Salinity (PSU)", "Currents (m/s)", etc.
- */
 export default function HorizontalColorbar() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const modelSlice = useOceanStore((s) => s.modelSlice);
@@ -24,7 +16,6 @@ export default function HorizontalColorbar() {
     [activePresetId, colorPresets]
   );
 
-  // Range and title based on active variable
   const { minVal, maxVal, label } = useMemo(() => {
     if (variable === 'salinity') {
       return {
@@ -47,7 +38,7 @@ export default function HorizontalColorbar() {
         label: 'Chlorophyll (mg/m³)',
       };
     }
-    // Default temperature
+
     return {
       minVal: colorMin ?? 5.0,
       maxVal: colorMax ?? 30.0,
@@ -55,7 +46,6 @@ export default function HorizontalColorbar() {
     };
   }, [variable, colorMin, colorMax, modelSlice]);
 
-  // Paint horizontal gradient onto canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -79,7 +69,6 @@ export default function HorizontalColorbar() {
     ctx.putImageData(imgData, 0, 0);
   }, [interpolator]);
 
-  // 6 evenly-spaced tick values: 5, 10, 15, 20, 25, 30
   const ticks = useMemo(() => {
     const count = 6;
     return Array.from({ length: count }, (_, i) => {
@@ -113,7 +102,7 @@ export default function HorizontalColorbar() {
         animation: 'fadeSlideIn 0.5s ease-out',
       }}
     >
-      {/* Horizontal gradient canvas strip */}
+
       <div
         style={{
           width: 240,
@@ -132,7 +121,6 @@ export default function HorizontalColorbar() {
         />
       </div>
 
-      {/* Numeric ticks row */}
       <div
         style={{
           display: 'flex',
@@ -156,7 +144,6 @@ export default function HorizontalColorbar() {
         ))}
       </div>
 
-      {/* Variable Title */}
       <div
         style={{
           fontSize: 12,

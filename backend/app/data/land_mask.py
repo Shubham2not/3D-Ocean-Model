@@ -1,16 +1,3 @@
-"""
-Ocean3D — Single Source of Truth Land/Ocean Masking System
-
-Features:
-1. Primary mask: Reads NetCDF _FillValue, missing_value, and NaNs. Honors declared attributes.
-   Prevents fill values (e.g. 1e20, 9.96921e36, -999) from leaking into color ranges.
-2. Backup mask: Bundled Natural Earth 50m ocean polygon clipped to bbox [60, 5, 78, 25].
-   Point-in-polygon resolves any cells fill values missed.
-   Tracks and reports cell counts masked by each method.
-3. Soft coastline falloff: Computes distance-to-coast using Euclidean Distance Transform (scipy.ndimage.distance_transform_edt),
-   ramping alpha smoothly from 0.0 to 1.0 over 2-3 grid cells at the shoreline.
-"""
-
 import os
 import json
 from typing import Tuple, List, Set, Optional, Dict, Any
@@ -20,7 +7,6 @@ import scipy.ndimage as ndi
 POLYGON_PATH = os.path.join(os.path.dirname(__file__), "arabian_sea_polygon.json")
 
 _OCEAN_POLYGON: Optional[List[List[float]]] = None
-
 
 def get_arabian_sea_polygon() -> List[List[float]]:
     """Loads and caches the bundled Natural Earth Arabian Sea ocean polygon."""
@@ -35,7 +21,6 @@ def get_arabian_sea_polygon() -> List[List[float]]:
         data = json.load(f)
     _OCEAN_POLYGON = data["coordinates"][0]
     return _OCEAN_POLYGON
-
 
 def point_in_polygon(x: float, y: float, poly: List[List[float]]) -> bool:
     """
@@ -55,7 +40,6 @@ def point_in_polygon(x: float, y: float, poly: List[List[float]]) -> bool:
                         inside = not inside
         p1x, p1y = p2x, p2y
     return inside
-
 
 def apply_land_mask(
     data_4d: np.ndarray,
@@ -78,31 +62,25 @@ def apply_land_mask(
     nlon = len(lons)
     total_cells = nlat * nlon
 
-    # Step 1: Detect Primary Mask from data values
-    # A 2D cell (i, j) is primary-masked if it is NaN, inf, or matches any known _FillValue / missing_value
     surface_slice = data_4d[0, 0, :, :].copy()
     primary_mask = np.zeros((nlat, nlon), dtype=bool)
 
-    # Check NaNs and infinities
     primary_mask |= ~np.isfinite(surface_slice)
 
-    # Check declared fill values (exact and float close)
     for fv in fill_values:
         if fv is not None and np.isfinite(fv):
             primary_mask |= np.isclose(surface_slice, fv, rtol=1e-4, atol=1e-4)
 
-    # Values exceeding physical limits (> 1e20 or < -1e20) are fill values
     primary_mask |= (np.abs(surface_slice) > 1e20)
 
     primary_masked_count = int(np.sum(primary_mask))
 
-    # Step 2: Backup Mask using Natural Earth Ocean Polygon
     poly = get_arabian_sea_polygon()
     backup_mask = np.zeros((nlat, nlon), dtype=bool)
 
     for i, lat in enumerate(lats):
         for j, lon in enumerate(lons):
-            # Only test cells not already masked by primary fill values
+
             if not primary_mask[i, j]:
                 is_ocean = point_in_polygon(lon, lat, poly)
                 if not is_ocean:
@@ -110,24 +88,15 @@ def apply_land_mask(
 
     backup_masked_count = int(np.sum(backup_mask))
 
-    # Combined land mask
     combined_land_mask = primary_mask | backup_mask
     water_mask = ~combined_land_mask
     water_count = int(np.sum(water_mask))
 
-    # Step 3: Apply mask to the 4D array (NaN for all masked cells)
     masked_data = data_4d.copy()
     masked_data[:, :, combined_land_mask] = np.nan
 
-    # Step 4: Compute distance-to-coast falloff
-    # distance_transform_edt computes Euclidean distance in grid cell units to nearest 0 (land)
     dist = ndi.distance_transform_edt(water_mask)
 
-    # Ramp alpha smoothly from 0.0 to 1.0 over roughly 2.5 grid cells (2-3 cells)
-    # At dist=0 (land): alpha=0.0
-    # At dist=1: alpha=0.40
-    # At dist=2: alpha=0.80
-    # At dist>=2.5: alpha=1.0
     coastline_alpha = np.clip(dist / 2.5, 0.0, 1.0).astype(np.float32)
     coastline_alpha[combined_land_mask] = 0.0
 

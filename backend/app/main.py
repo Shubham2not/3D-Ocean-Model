@@ -1,9 +1,3 @@
-"""
-Ocean3D — FastAPI Application Entry Point
-
-Main application with CORS middleware and router registration.
-"""
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,7 +12,6 @@ app = FastAPI(
     version="0.1.0-mvp",
 )
 
-# CORS — allow local dev frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,11 +20,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routers
 app.include_router(model_data.router)
 app.include_router(argo.router)
 app.include_router(colorbar.router)
-
 
 @app.get("/", tags=["Health"])
 async def root():
@@ -42,6 +33,27 @@ async def root():
         "docs": "/docs",
     }
 
+@app.get("/point-data", tags=["Point Data"])
+@app.get("/point_data", tags=["Point Data"])
+async def root_point_data(
+    lat: float,
+    lon: float,
+    variable: str = "temperature",
+    depth: int = 0,
+    time: int = 0,
+    date: str = None,
+    method: str = "bilinear",
+):
+    from app.routers.model_data import get_point_data
+    return await get_point_data(
+        lat=lat,
+        lon=lon,
+        variable=variable,
+        depth=depth,
+        time=time,
+        date=date,
+        method=method,
+    )
 
 @app.get("/health", tags=["Health"])
 @app.get("/api/v1/health", tags=["Health"])

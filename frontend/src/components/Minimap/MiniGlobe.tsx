@@ -1,11 +1,5 @@
 import { useRef, useEffect } from 'react';
 
-/**
- * MiniGlobe — Floating bottom-right mini-globe widget.
- * Renders an orthographic globe with continents, dark oceans,
- * atmospheric rim lighting, and a highlighted bounding box
- * indicating the current focus region (Arabian Sea / Indian Ocean).
- */
 export default function MiniGlobe() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -17,11 +11,9 @@ export default function MiniGlobe() {
 
     let animId: number | undefined;
 
-    // Load world map image or draw procedurally
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = 'https://images.unsplash.com/photo-1614730321146-b6fa6a46bcb4?auto=format&fit=crop&w=600&q=80';
-
 
     const render = () => {
       const width = canvas.width;
@@ -32,13 +24,11 @@ export default function MiniGlobe() {
 
       ctx.clearRect(0, 0, width, height);
 
-      // Save for globe clipping
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.clip();
 
-      // Deep ocean base
       const oceanGrad = ctx.createRadialGradient(cx - radius * 0.3, cy - radius * 0.3, radius * 0.1, cx, cy, radius);
       oceanGrad.addColorStop(0, '#103058');
       oceanGrad.addColorStop(0.6, '#081a36');
@@ -46,19 +36,18 @@ export default function MiniGlobe() {
       ctx.fillStyle = oceanGrad;
       ctx.fill();
 
-      // Draw Earth continents texture if loaded
       if (img.complete && img.naturalWidth > 0) {
         ctx.globalAlpha = 0.85;
         ctx.drawImage(img, cx - radius * 1.5, cy - radius * 1.2, radius * 3.0, radius * 2.4);
         ctx.globalAlpha = 1.0;
       } else {
-        // Procedural continents fallback
+
         ctx.fillStyle = '#2d5a3f';
         ctx.beginPath();
-        ctx.arc(cx - radius * 0.45, cy + radius * 0.1, radius * 0.45, 0, Math.PI * 2); // Africa
+        ctx.arc(cx - radius * 0.45, cy + radius * 0.1, radius * 0.45, 0, Math.PI * 2); 
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(cx + radius * 0.15, cy - radius * 0.25, radius * 0.35, 0, Math.PI * 2); // Asia
+        ctx.arc(cx + radius * 0.15, cy - radius * 0.25, radius * 0.35, 0, Math.PI * 2); 
         ctx.fill();
         ctx.beginPath();
         ctx.moveTo(cx + radius * 0.05, cy - radius * 0.1);
@@ -68,7 +57,6 @@ export default function MiniGlobe() {
         ctx.fill();
       }
 
-      // Sphere 3D shading overlay (specular + shadow)
       const shadeGrad = ctx.createRadialGradient(cx - radius * 0.35, cy - radius * 0.35, radius * 0.1, cx, cy, radius);
       shadeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.18)');
       shadeGrad.addColorStop(0.4, 'rgba(0, 0, 0, 0)');
@@ -79,7 +67,6 @@ export default function MiniGlobe() {
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Current focus bounding box (white glowing rectangle over Arabian Sea / Indian Ocean)
       const boxX = cx - radius * 0.12;
       const boxY = cy - radius * 0.2;
       const boxW = radius * 0.65;
@@ -89,14 +76,12 @@ export default function MiniGlobe() {
       ctx.lineWidth = 1.8;
       ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-      // Subtle white glow around box
       ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
       ctx.lineWidth = 3.5;
       ctx.strokeRect(boxX, boxY, boxW, boxH);
 
       ctx.restore();
 
-      // Atmosphere outer rim glow
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, radius + 1, 0, Math.PI * 2);

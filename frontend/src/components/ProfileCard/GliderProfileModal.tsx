@@ -143,7 +143,7 @@ export default function GliderProfileModal() {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -190,7 +190,6 @@ export default function GliderProfileModal() {
           </button>
         </div>
 
-        {/* Source Citation Banner */}
         <div
           style={{
             background: 'rgba(168, 85, 247, 0.08)',
@@ -226,7 +225,6 @@ export default function GliderProfileModal() {
           </a>
         </div>
 
-        {/* Glider stats */}
         <div
           style={{
             display: 'grid',
@@ -257,7 +255,6 @@ export default function GliderProfileModal() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 8 }}>
           <button
             onClick={() => setActiveTab('oxygen')}
@@ -321,7 +318,6 @@ export default function GliderProfileModal() {
           </button>
         </div>
 
-        {/* Tab Content */}
         <div style={{ height: 320, width: '100%', overflowY: activeTab === 'table' ? 'auto' : 'hidden' }}>
           {activeTab === 'oxygen' && <Line data={oxygenChartData} options={chartOptions('Dissolved Oxygen (µmol/kg)', 20, 220)} />}
           {activeTab === 'temp' && <Line data={tempChartData} options={chartOptions('Temperature (°C)', 4, 30)} />}
@@ -358,7 +354,6 @@ export default function GliderProfileModal() {
           )}
         </div>
 
-        {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8, borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <button
             onClick={() => setGliderModalOpen(false)}

@@ -1,28 +1,11 @@
-"""
-Ocean3D — xarray NetCDF Model Data Loader
-
-Reads real-world NetCDF ocean model outputs (e.g., Copernicus Marine GLOBAL_MULTIYEAR_PHY_001_030
-or INCOIS LAS extracts) using xarray and NetCDF4.
-
-Features:
-- Flexible variable naming: thetao, temperature, temp, votemper
-- Flexible coordinate names: (time, ocean_time), (depth, lev, deptht), (latitude, lat), (longitude, lon)
-- Auto-converts Kelvin to Celsius (if T > 100 K)
-- Handles land masks / NaNs gracefully
-- Automatically generates a real Copernicus Marine standard NetCDF sample if no external file is provided
-- Graceful automatic fallback to the synthetic generator if NetCDF reading fails
-"""
-
 import os
 import glob
 from typing import Dict, Any, Optional, List
 import numpy as np
 
-# Directory where real NetCDF files can be placed
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "netcdf"))
 
 _CACHED_MODEL_DATA: Optional[Dict[str, Any]] = None
-
 
 def _create_sample_copernicus_netcdf(filepath: str) -> None:
     """
@@ -47,7 +30,6 @@ def _create_sample_copernicus_netcdf(filepath: str) -> None:
         nlat = len(lat_coords)
         nlon = len(lon_coords)
 
-        # Generate realistic physical temperature array
         lon_2d, lat_2d = np.meshgrid(lon_coords, lat_coords)
         base_lat = 30.2 - ((lat_2d - 5.0) / 20.0) * 2.2
         upwelling = -1.4 * np.exp(-((lon_2d - 60.0) / 7.0) ** 2) * np.sin(np.pi * (lat_2d - 5.0) / 20.0)
@@ -74,7 +56,6 @@ def _create_sample_copernicus_netcdf(filepath: str) -> None:
                 depth_damping = max(0.2, 1.0 - (d / 1200.0))
                 temp_4d[t, d_idx, :, :] = np.round(t_d * depth_damping + (1.0 - depth_damping) * 7.5, 2)
 
-        # Use Arabian Sea polygon to mask land in sample Copernicus NetCDF
         from app.data.land_mask import get_arabian_sea_polygon, point_in_polygon
         poly = get_arabian_sea_polygon()
 
@@ -115,7 +96,6 @@ def _create_sample_copernicus_netcdf(filepath: str) -> None:
         print(f"[NetCDF Loader] Created real-world Copernicus Marine sample NetCDF at: {filepath}")
     except Exception as e:
         print(f"[NetCDF Loader] Warning: Could not generate sample NetCDF: {e}")
-
 
 def _create_incois_las_netcdf(filepath: str) -> None:
     """
@@ -209,7 +189,6 @@ def _create_incois_las_netcdf(filepath: str) -> None:
     except Exception as e:
         print(f"[NetCDF Loader] Warning: Could not generate INCOIS NetCDF: {e}")
 
-
 def load_netcdf_data() -> Dict[str, Any]:
     """
     Finds and reads the primary NetCDF file from the data directory using xarray.
@@ -222,21 +201,18 @@ def load_netcdf_data() -> Dict[str, Any]:
     if not os.path.exists(incois_file):
         _create_incois_las_netcdf(incois_file)
 
-    # Search for user-provided NetCDF files (*.nc, *.nc4), prioritizing INCOIS LAS
     nc_files = glob.glob(os.path.join(DATA_DIR, "*.nc*"))
     if not nc_files:
         raise FileNotFoundError(f"No NetCDF files found in {DATA_DIR}")
 
-    # Prioritize INCOIS file if available
     target_file = incois_file if os.path.exists(incois_file) else nc_files[0]
     filename = os.path.basename(target_file)
     print(f"[NetCDF Loader] Loading oceanographic data from NetCDF: {filename}")
 
     import xarray as xr
 
-    # Open dataset via xarray
     with xr.open_dataset(target_file) as ds:
-        # 1. Detect temperature / SST variable
+
         var_name = None
         for candidate in ["SST", "sst", "SST-id-d272905813", "thetao", "temperature", "temp", "votemper", "sea_water_potential_temperature"]:
             if candidate in ds.data_vars:
@@ -244,7 +220,7 @@ def load_netcdf_data() -> Dict[str, Any]:
                 break
 
         if var_name is None:
-            # Fallback: take first 3D or 4D variable
+
             for k, v in ds.data_vars.items():
                 if len(v.dims) >= 3:
                     var_name = k
@@ -255,8 +231,6 @@ def load_netcdf_data() -> Dict[str, Any]:
 
         data_var = ds[var_name]
 
-
-        # Read declared fill values and missing values
         fill_values = set()
         for attr_key in ["_FillValue", "missing_value"]:
             if attr_key in data_var.attrs and data_var.attrs[attr_key] is not None:
@@ -270,7 +244,6 @@ def load_netcdf_data() -> Dict[str, Any]:
                 except Exception:
                     pass
 
-        # 2. Detect coordinate names
         time_dim = next((d for d in ["time", "ocean_time", "Times", "t"] if d in data_var.dims), None)
         depth_dim = next((d for d in ["depth", "deptht", "lev", "level", "z"] if d in data_var.dims), None)
         lat_dim = next((d for d in ["latitude", "lat", "nav_lat", "y"] if d in data_var.dims), None)
@@ -279,7 +252,6 @@ def load_netcdf_data() -> Dict[str, Any]:
         if not all([lat_dim, lon_dim]):
             raise ValueError(f"Missing spatial coordinates in NetCDF variable {var_name}")
 
-        # Extract coordinate values
         lats = [round(float(x), 2) for x in np.array(ds[lat_dim].values).tolist()]
         lons = [round(float(x), 2) for x in np.array(ds[lon_dim].values).tolist()]
 
@@ -300,18 +272,14 @@ def load_netcdf_data() -> Dict[str, Any]:
         else:
             times = ["2026-09-15T00:00:00Z"]
 
-        # Ensure array order is (time, depth, lat, lon)
         dims_to_reorder = [d for d in [time_dim, depth_dim, lat_dim, lon_dim] if d is not None]
         data_reordered = data_var.transpose(*dims_to_reorder).values.astype(np.float32)
 
-        # Reshape if time or depth were singleton / missing
         if time_dim is None:
             data_reordered = np.expand_dims(data_reordered, axis=0)
         if depth_dim is None:
             data_reordered = np.expand_dims(data_reordered, axis=1)
 
-        # 3. Auto-convert Kelvin to Celsius on valid ocean values
-        # Do not convert fill values
         is_fill = np.zeros(data_reordered.shape, dtype=bool)
         for fv in fill_values:
             is_fill |= np.isclose(data_reordered, fv, rtol=1e-4, atol=1e-4)
@@ -320,22 +288,19 @@ def load_netcdf_data() -> Dict[str, Any]:
 
         if np.any(valid_ocean_pre):
             median_val = float(np.median(data_reordered[valid_ocean_pre]))
-            if median_val > 100.0:  # Kelvin detection
+            if median_val > 100.0:
                 print("[NetCDF Loader] Detected Kelvin units. Converting to Celsius (T - 273.15).")
                 data_reordered[valid_ocean_pre] -= 273.15
 
-        # 4. Apply Single Source of Truth Land Masking Pipeline
         from app.data.land_mask import apply_land_mask
         masked_data, coastline_alpha, diagnostics = apply_land_mask(
             data_reordered, lats, lons, fill_values=fill_values
         )
         masked_data = np.round(masked_data, 2)
 
-        # 5. Synthesize Physical Multi-Variables (Salinity, Chlorophyll, Currents)
         ntime, ndepth, nlat, nlon = masked_data.shape
         lon_grid, lat_grid = np.meshgrid(np.array(lons, dtype=np.float32), np.array(lats, dtype=np.float32))
 
-        # Salinity (PSU): 34.5 to 37.2 PSU
         salinity_surf = 35.4 + ((lat_grid - 5.0) / 20.0) * 1.5 - ((lon_grid - 60.0) / 18.0) * 0.5
         salinity_4d = np.zeros_like(masked_data)
         for t in range(ntime):
@@ -344,16 +309,14 @@ def load_netcdf_data() -> Dict[str, Any]:
                 salinity_4d[t, d_idx, :, :] = np.round(salinity_surf * d_decay + 35.1 * (1.0 - d_decay), 2)
         salinity_4d, _, _ = apply_land_mask(salinity_4d, lats, lons)
 
-        # Chlorophyll-a (mg/m3): upwelling bloom along western boundary and southwest India
         chl_surf = 0.12 + 2.4 * np.exp(-((lon_grid - 60.0) / 4.0) ** 2) + 1.1 * np.exp(-((lon_grid - 75.5) / 2.5) ** 2) * (lat_grid < 16.0)
         chl_4d = np.zeros_like(masked_data)
         for t in range(ntime):
             for d_idx, d in enumerate(depths):
-                d_decay = np.exp(-d / 45.0)  # Photic zone rapid attenuation
+                d_decay = np.exp(-d / 45.0)
                 chl_4d[t, d_idx, :, :] = np.round(chl_surf * d_decay + 0.01, 2)
         chl_4d, _, _ = apply_land_mask(chl_4d, lats, lons)
 
-        # Currents: Anticyclonic circulation + northward Somali jet
         center_lon, center_lat = 68.0, 14.0
         dx = (lon_grid - center_lon) / 8.0
         dy = (lat_grid - center_lat) / 6.0
@@ -392,7 +355,6 @@ def load_netcdf_data() -> Dict[str, Any]:
             "filename": filename,
             "dataset_attrs": dict(ds.attrs),
         }
-
 
 def get_model_data() -> Dict[str, Any]:
     """

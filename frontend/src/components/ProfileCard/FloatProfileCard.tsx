@@ -13,19 +13,8 @@ import { Line } from 'react-chartjs-2';
 import { useOceanStore } from '../../stores/oceanStore';
 import { fetchArgoProfile } from '../../services/api';
 
-// Register ChartJS elements
 ChartJS.register(LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-/**
- * FloatProfileCard — Top-right floating glassmorphic card matching the reference image.
- *
- * Shows:
- * - Header: Argo icon + "Argo Float #6903723" + close 'x'
- * - Metrics: Position, Depth (m), Temperature (°C), Salinity (PSU)
- * - "Profile" heading
- * - Inverted Depth vs Temperature Line Chart with dots
- * - "View Full Profile" button
- */
 export default function FloatProfileCard() {
   const selectedFloat = useOceanStore((s) => s.selectedFloat);
   const selectedProfile = useOceanStore((s) => s.selectedProfile);
@@ -39,7 +28,6 @@ export default function FloatProfileCard() {
   const latStr = selectedFloat ? `${selectedFloat.lat.toFixed(1)}°N` : '12.4°N';
   const lonStr = selectedFloat ? `${selectedFloat.lon.toFixed(1)}°E` : '76.8°E';
 
-  // Load real Argo GDAC profile if not yet loaded
   useEffect(() => {
     let cancelled = false;
     fetchArgoProfile(floatId, 48)
@@ -58,7 +46,6 @@ export default function FloatProfileCard() {
 
   if (!profileOpen) return null;
 
-  // Sample or active profile data
   const profilePoints = useMemo(() => {
     if (selectedProfile && selectedProfile.levels.length > 0) {
       return selectedProfile.levels.map((lvl) => ({
@@ -66,7 +53,7 @@ export default function FloatProfileCard() {
         y: lvl.depth_m,
       }));
     }
-    // Default matching reference image curve
+
     return [
       { x: 25.4, y: 0 },
       { x: 24.5, y: 80 },
@@ -102,11 +89,11 @@ export default function FloatProfileCard() {
   const chartOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
-    indexAxis: 'y' as const, // Inverted Y-axis is depth
+    indexAxis: 'y' as const, 
     scales: {
       y: {
         type: 'linear' as const,
-        reverse: true, // 0 at top, 1000 at bottom
+        reverse: true, 
         min: 0,
         max: 1000,
         ticks: {
@@ -197,7 +184,7 @@ export default function FloatProfileCard() {
         animation: 'fadeSlideIn 0.35s ease-out',
       }}
     >
-      {/* Header */}
+
       <div
         style={{
           display: 'flex',
@@ -251,7 +238,6 @@ export default function FloatProfileCard() {
         </button>
       </div>
 
-      {/* Key-Value Metrics List */}
       {(() => {
         const level1000 = selectedProfile?.levels?.find((l) => Math.abs(l.depth_m - 1000) <= 50) ?? selectedProfile?.levels?.[selectedProfile.levels.length - 1];
         const tempVal = level1000 ? level1000.temperature.toFixed(1) : '12.6';
@@ -287,19 +273,16 @@ export default function FloatProfileCard() {
         );
       })()}
 
-      {/* Section Divider & Title */}
       <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9', marginBottom: 6 }}>
           Profile
         </div>
 
-        {/* Chart Container */}
         <div style={{ height: 180, width: '100%' }}>
           <Line data={chartData} options={chartOptions} />
         </div>
       </div>
 
-      {/* Button: View Full Profile */}
       <button
         id="view-full-profile-btn"
         onClick={() => {

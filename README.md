@@ -142,7 +142,152 @@ backend/data/
 
 ---
 
+## Interactive 4-Variable Oceanographic Layer & Click-to-Inspect
+
+Ocean3D provides an interactive multi-variable layer featuring both a **2D Leaflet Map** and a **3D Cesium Earth Globe** with high-resolution gridded overlays and click-to-inspect point data analysis.
+
+### 1. Variables & Supported Data Products
+
+| Variable | Units | Visualization Type | Default Public Dataset / Product |
+| :--- | :--- | :--- | :--- |
+| **Temperature** | `°C` | Continuous thermal colormap raster | Copernicus Marine Service (**CMEMS**) `GLOBAL_MULTIYEAR_PHY_001_030` / INCOIS LAS |
+| **Salinity** | `PSU` | Haline colormap raster | Copernicus Marine Service (**CMEMS**) Physical Ocean Reanalysis |
+| **Currents** | `m/s` (+ heading) | Flow velocity speed overlay + directional vectors | NOAA Ocean Surface Current Analyses Real-time (**OSCAR**) / CMEMS Surface Velocity |
+| **Chlorophyll-a** | `mg/m³` | Satellite ocean color algae colormap | NASA Ocean Color (**MODIS-Aqua**) L3 Mapped 4km / GlobColour |
+
+---
+
+### Google Earth Basemap Integration (2D Map)
+
+The 2D Leaflet map supports high-resolution photographic satellite imagery and terrain directly from **Google Earth & Google Maps Platform**:
+
+- **Basemaps Included**:
+  - **Google Earth Hybrid**: Satellite imagery with international borders, coastlines, and place names.
+  - **Google Earth Satellite**: High-resolution photographic satellite imagery.
+  - **Google Earth Terrain**: Topographic elevation contours and shaded relief.
+  - **Dark Ocean (CartoDB)**: Sleek dark canvas for high-contrast neon ocean data overlays.
+  - **Esri World Ocean**: Bathymetric depth contours and seabed geology.
+- **Configuring Your Google API Key**:
+  - **Via UI**: Click the **🔑 Google Earth Key** button directly on the 2D map to open the settings modal, paste your API key, and select your preferred basemap. The key persists in your browser storage.
+  - **Via `.env`**: Set `VITE_GOOGLE_EARTH_API_KEY="AIzaSy..."` in `frontend/.env`.
+- **Dynamic Opacity Control**: Use the floating opacity slider on the 2D map to blend between the oceanographic data layer and the underlying Google Earth photographic satellite basemap.
+
+---
+
+### 2. Click-to-Inspect API Endpoint
+
+The backend exposes a high-performance spatial interpolation endpoint:
+
+```http
+GET /point-data?lat=15.2&lon=65.4&variable=temperature&depth=0&time=0&method=bilinear
+```
+*(Also aliased at `/api/v1/model/point-data`)*
+
+#### Query Parameters:
+- `lat` *(float, required)*: Query latitude (e.g. `15.2`)
+- `lon` *(float, required)*: Query longitude (e.g. `65.4`)
+- `variable` *(string, default: `temperature`)*: `temperature`, `salinity`, `currents`, or `chlorophyll`
+- `depth` *(int, default: `0`)*: Depth level index (`0` = surface)
+- `time` *(int, default: `0`)*: Timestep index
+- `date` *(string, optional)*: ISO date string to query specific date (e.g. `2024-09-15`)
+- `method` *(string, default: `bilinear`)*: `bilinear` (smooth sub-grid) or `nearest` (grid cell center)
+
+#### Sample Response Payload:
+```json
+{
+  "query_lat": 15.2,
+  "query_lon": 65.4,
+  "nearest_grid_lat": 15.0,
+  "nearest_grid_lon": 65.5,
+  "is_land": false,
+  "variable": "temperature",
+  "value": 28.37,
+  "units": "°C",
+  "depth_m": 0,
+  "depth_index": 0,
+  "timestamp": "2024-09-15T12:00:00Z",
+  "time_index": 0,
+  "source": "INCOIS LAS / Copernicus Marine Service (CMEMS)",
+  "product_name": "CMEMS Physical Ocean Temperature Analysis (GLOBAL_MULTIYEAR_PHY_001_030)",
+  "interpolation_method": "bilinear",
+  "current_details": null,
+  "nearby_argo": {
+    "float_id": "2902150",
+    "wmo_id": "2902150",
+    "platform_type": "PROVOR / APEX Profiling Float",
+    "distance_km": 15.5,
+    "float_lat": 12.5,
+    "float_lon": 65.3,
+    "cycle_number": 3,
+    "observed_value": 28.595,
+    "model_bias_delta": 0.395
+  }
+}
+```
+
+---
+
+### 3. How the Spatial Interpolation Engine Works
+
+The underlying oceanographic model outputs are stored on regular or curvilinear grids (e.g., $0.5^\circ$ or $1/12^\circ$ resolution). The spatial interpolation engine (`backend/app/data/interpolation.py`) handles continuous coordinate lookups:
+
+1. **Bilinear Sub-Grid Interpolation (`method=bilinear`)**:
+   - For a clicked target coordinate $(x, y) = (\text{lon}, \text{lat})$, the engine identifies the 4 enclosing grid bounding nodes:
+     $$Q_{11} = (x_1, y_1),\quad Q_{12} = (x_1, y_2),\quad Q_{21} = (x_2, y_1),\quad Q_{22} = (x_2, y_2)$$
+   - Computes normalized fractional distances:
+     $$\Delta x = \frac{x - x_1}{x_2 - x_1},\quad \Delta y = \frac{y - y_1}{y_2 - y_1}$$
+   - **Land-Mask Boundary Protection**: If some nodes lie on land (represented as `NaN` or masked cells in xarray), the algorithm dynamically renormalizes weights across the remaining valid ocean nodes:
+     $$V(x, y) = \frac{\sum w_k \cdot V_k}{\sum w_k}$$
+     This prevents valid coastal ocean points from returning `null` merely because a neighboring node touches continental land. If all 4 bounding nodes are land, it cleanly classifies the point as `is_land: true`.
+
+2. **Nearest-Neighbor Lookup (`method=nearest`)**:
+   - Computes Euclidean distance across 1D coordinate vectors:
+     $$\text{idx}_{\text{lat}} = \arg\min |\text{lats} - \text{lat}|,\quad \text{idx}_{\text{lon}} = \arg\min |\text{lons} - \text{lon}|$$
+   - Returns the exact value of the closest model grid cell.
+
+3. **Currents Vector Transformation**:
+   - Eastward ($u$) and Northward ($v$) velocity components are converted into oceanographic speed and flow direction:
+     $$\text{Speed} = \sqrt{u^2 + v^2}\quad (\text{m/s})$$
+     $$\theta = \left(\text{atan2}(u, v) \cdot \frac{180}{\pi} + 360\right) \pmod{360}$$
+   - Mapped to 16-point cardinal compass bearings (e.g. `N`, `NNE`, `NE`, `ENE`, `E`, `ESE`, etc.).
+
+4. **In-Situ Argo Float Proximity Comparison**:
+   - Computes great-circle distances to all active profiling floats via the **Haversine formula**:
+     $$d = 2R \arcsin\left(\sqrt{\sin^2\left(\frac{\Delta\phi}{2}\right) + \cos\phi_1\cos\phi_2\sin^2\left(\frac{\Delta\lambda}{2}\right)}\right)$$
+   - If the nearest float is within $150\text{ km}$, retrieves the float's most recent surface observation and calculates the model bias delta:
+     $$\Delta_{\text{bias}} = V_{\text{model}} - V_{\text{in-situ}}$$
+
+---
+
+### 4. How to Plug In Real Data Sources
+
+To connect your own real-world data sources or custom NetCDF files:
+
+1. Copy the environment configuration template:
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+
+2. Configure credentials or local file paths in `backend/.env`:
+   - **Copernicus Marine Service (CMEMS)**:
+     Register for free at [marine.copernicus.eu](https://marine.copernicus.eu/) and set `CMEMS_USERNAME` and `CMEMS_PASSWORD`. Or place your downloaded `.nc` file in `backend/data/netcdf/`.
+   - **NOAA OSCAR Currents**:
+     Connects automatically via open NOAA ERDDAP (`https://coastwatch.pfeg.noaa.gov/erddap/griddap/oscar_currents_interim_2019.json`). Or place local current NetCDF files in `backend/data/netcdf/`.
+   - **NASA Ocean Color / MODIS-Aqua (Chlorophyll-a)**:
+     Generate a free Earthdata application key at [urs.earthdata.nasa.gov](https://urs.earthdata.nasa.gov/) and set `NASA_EARTHDATA_TOKEN`. Or drop `.nc` files in `backend/data/netcdf/`.
+   - **Argo Profiling Floats**:
+     Place authentic Ifremer GDAC profile files (`*_prof.nc`) into `backend/data/argo/`.
+
+3. Restart the FastAPI service:
+   ```bash
+   uvicorn app.main:app --reload --port 8000
+   ```
+   The backend automatically parses and caches datasets upon startup using `xarray` and `netCDF4`.
+
+---
+
 ## License & Attribution
 
 Developed for **Smart India Hackathon (SIH)** • Ministry of Earth Sciences (MoES) & Indian National Centre for Ocean Information Services (INCOIS).
+
 

@@ -4,13 +4,6 @@ import * as Cesium from 'cesium';
 import { useOceanStore } from '../../stores/oceanStore';
 import { fetchArgoProfile, fetchModelProfile } from '../../services/api';
 
-/**
- * ArgoMarkers — Renders Argo float positions on the Cesium globe matching
- * the reference image:
- * - Yellow circular dot with label "Argo Float"
- * - Vertical dashed yellow stem extending down to the ocean surface/block
- * - Interactive click opening the top-right profile card
- */
 export default function ArgoMarkers() {
   const argoFloats = useOceanStore((s) => s.argoFloats);
   const timeIndex = useOceanStore((s) => s.timeIndex);
@@ -45,7 +38,6 @@ export default function ArgoMarkers() {
     [setSelectedFloat, setSelectedProfile, setModelProfile, setProfileOpen, timeIndex, variable]
   );
 
-  // Focus/primary float position matching the reference image (over the cutaway block)
   const primaryFloat = {
     float_id: '6903723',
     lat: 14.2,
@@ -62,13 +54,13 @@ export default function ArgoMarkers() {
     <>
       {allFloatsToRender.map((float_) => {
         const isPrimary = float_.float_id === '6903723' || float_.float_id === selectedFloat?.float_id;
-        const altitude = isPrimary ? 320000 : 80000; // Floating altitude for label
+        const altitude = isPrimary ? 320000 : 80000; 
         const topPos = Cesium.Cartesian3.fromDegrees(float_.lon, float_.lat, altitude);
         const surfacePos = Cesium.Cartesian3.fromDegrees(float_.lon, float_.lat, 100);
 
         return (
           <div key={`argo-group-${float_.float_id}`}>
-            {/* Vertical dashed yellow stem dropping down to surface/volume */}
+
             {isPrimary && (
               <Entity
                 id={`argo-stem-${float_.float_id}`}
@@ -84,7 +76,6 @@ export default function ArgoMarkers() {
               />
             )}
 
-            {/* Surface touchdown dot */}
             {isPrimary && (
               <Entity
                 id={`argo-base-${float_.float_id}`}
@@ -99,7 +90,6 @@ export default function ArgoMarkers() {
               />
             )}
 
-            {/* Floating marker with Yellow Dot and "Argo Float" label */}
             <Entity
               id={`argo-${float_.float_id}`}
               name={`Argo Float ${float_.float_id}`}

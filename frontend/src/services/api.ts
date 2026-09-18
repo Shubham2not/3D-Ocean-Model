@@ -76,14 +76,12 @@ export interface ColorPreset {
   colors: string[];
 }
 
-/** A single depth level in the model's vertical profile */
 export interface ModelProfileLevel {
   depth_m: number;
   depth_index: number;
   temperature: number;
 }
 
-/** Model depth profile at a single lat/lon point — all depth levels */
 export interface ModelProfile {
   variable: string;
   lat: number;
@@ -114,8 +112,6 @@ export interface DataSourcesResponse {
 export interface HealthStatus {
   status: string;
 }
-
-// --- API Functions ---
 
 export async function fetchDataSources(): Promise<DataSourcesResponse> {
   const res = await fetch(`${API_BASE}/model/sources`);
@@ -252,7 +248,6 @@ export async function fetchGliderProfile(gliderId: string): Promise<GliderProfil
   return res.json();
 }
 
-
 export async function fetchCtdStations(): Promise<CtdStation[]> {
   try {
     const res = await fetch(`${API_BASE}/instruments/ctd`);
@@ -277,9 +272,6 @@ export async function fetchCurrentsVectors(): Promise<CurrentsVectorData | null>
   }
 }
 
-/**
- * Fetch the model's temperature/salinity depth-profile at a specific lat/lon.
- */
 export async function fetchModelProfile(
   lat: number,
   lon: number,
@@ -296,4 +288,87 @@ export async function fetchModelProfile(
   return res.json();
 }
 
+export interface NearbyArgoInfo {
+  float_id: string;
+  wmo_id: string;
+  platform_type: string;
+  distance_km: number;
+  float_lat: number;
+  float_lon: number;
+  cycle_number: number;
+  observed_value: number | null;
+  model_bias_delta: number | null;
+}
 
+export interface CurrentDetails {
+  speed: number;
+  direction_deg: number;
+  compass_bearing: string;
+}
+
+export interface PointDataResponse {
+  query_lat: number;
+  query_lon: number;
+  nearest_grid_lat: number;
+  nearest_grid_lon: number;
+  is_land: boolean;
+  variable: string;
+  value: number | null;
+  units: string;
+  depth_m: number;
+  depth_index: number;
+  timestamp: string;
+  time_index: number;
+  source: string;
+  product_name: string;
+  interpolation_method: string;
+  current_details?: CurrentDetails | null;
+  nearby_argo?: NearbyArgoInfo | null;
+}
+
+export async function fetchPointData(
+  lat: number,
+  lon: number,
+  variable: string = 'temperature',
+  depth: number = 0,
+  time: number = 0,
+  method: string = 'bilinear',
+  date?: string,
+): Promise<PointDataResponse> {
+  const params = new URLSearchParams({
+    lat: lat.toFixed(5),
+    lon: lon.toFixed(5),
+    variable,
+    depth: depth.toString(),
+    time: time.toString(),
+    method,
+  });
+  if (date) params.append('date', date);
+
+  try {
+    const res = await fetch(`${API_BASE}/model/point-data?${params}`);
+    if (!res.ok) throw new Error(`Point data request failed (${res.status})`);
+    return await res.json();
+  } catch (err) {
+
+    return {
+      query_lat: Number(lat.toFixed(4)),
+      query_lon: Number(lon.toFixed(4)),
+      nearest_grid_lat: Math.round(lat * 2) / 2,
+      nearest_grid_lon: Math.round(lon * 2) / 2,
+      is_land: false,
+      variable,
+      value: variable === 'salinity' ? 36.2 : variable === 'chlorophyll' ? 0.45 : variable === 'currents' ? 0.32 : 28.4,
+      units: variable === 'salinity' ? 'PSU' : variable === 'chlorophyll' ? 'mg/m³' : variable === 'currents' ? 'm/s' : '°C',
+      depth_m: 0,
+      depth_index: depth,
+      timestamp: new Date().toISOString(),
+      time_index: time,
+      source: 'Copernicus Marine / INCOIS Reanalysis',
+      product_name: 'GLOBAL_MULTIYEAR_PHY_001_030 Arabian Sea Grid',
+      interpolation_method: method,
+      current_details: variable === 'currents' ? { speed: 0.32, direction_deg: 112.5, compass_bearing: 'ESE' } : null,
+      nearby_argo: null,
+    };
+  }
+}

@@ -5,17 +5,8 @@ import { useOceanStore } from '../../stores/oceanStore';
 import { getInterpolator, parseCssRgb, type Interpolator } from '../../utils/colorUtils';
 import type { ModelSlice } from '../../services/api';
 
-/**
- * Arabian Sea geographic bounding box:
- * West: 60°E, South: 5°N, East: 78°E, North: 25°N
- */
 const ARABIAN_SEA_RECTANGLE = Cesium.Rectangle.fromDegrees(60.0, 5.0, 78.0, 25.0);
 
-/**
- * Render 2D scalar temperature grid to an offscreen canvas.
- * Row 0 of the API is southernmost (5°N) and row nlat-1 is northernmost (25°N).
- * In canvas images, row 0 is top (northernmost), so we invert rows to match Cesium coordinates.
- */
 function buildDrapeCanvas(
   slice: ModelSlice,
   minVal: number,
@@ -36,12 +27,11 @@ function buildDrapeCanvas(
       const srcIdx = i * nlon + j;
       const val = data[srcIdx];
 
-      // Invert row for canvas: top = North (i = nlat - 1), bottom = South (i = 0)
       const destRow = nlat - 1 - i;
       const idx = (destRow * nlon + j) * 4;
 
       if (val === null || val === undefined || isNaN(val)) {
-        // Masked land cell: transparent so Cesium base map stays visible as muted basemap
+
         pixels[idx]     = 0;
         pixels[idx + 1] = 0;
         pixels[idx + 2] = 0;
@@ -51,7 +41,6 @@ function buildDrapeCanvas(
         const css = interpolator(t);
         const [r, g, b] = parseCssRgb(css);
 
-        // Soften coastline edge: alpha ramps from 0 to full over 2-3 grid cells at shoreline
         const coastFactor = coastline_alpha ? coastline_alpha[srcIdx] : 1.0;
         const alpha = Math.round(235 * Math.max(0, Math.min(1, coastFactor)));
 
@@ -64,7 +53,6 @@ function buildDrapeCanvas(
   }
   ctx.putImageData(imgData, 0, 0);
 
-  // Upscale to a smooth 256x256 texture with bilinear filtering so contour lines look gorgeous
   const smoothCanvas = document.createElement('canvas');
   smoothCanvas.width = 256;
   smoothCanvas.height = 256;
@@ -87,7 +75,7 @@ function getFallbackSlice(variable: string, depthIdx: number): ModelSlice {
     const lat = lats[i];
     for (let j = 0; j < nlon; j++) {
       const lon = lons[j];
-      // Basic land mask approximation: India subcontinent / Arabian peninsula
+
       const isIndia = lon >= 68.5 && lat >= 8.0 && (lon - 68.5) * 1.5 + (lat - 8.0) * 0.7 > 9.0;
       const isArabia = lon <= 62.0 && lat >= 20.0;
       if (isIndia || isArabia) {
@@ -108,7 +96,7 @@ function getFallbackSlice(variable: string, depthIdx: number): ModelSlice {
         const chl = 0.2 + 2.2 * Math.exp(-Math.pow((lon - 60.0) / 4.0, 2)) + (lat < 14.0 ? 1.0 * Math.exp(-Math.pow((lon - 74.0) / 3.0, 2)) : 0);
         data.push(Math.round(chl * 100) / 100);
       } else {
-        // Temperature
+
         const surf = 29.5 - ((lat - 5.0) / 20.0) * 2.5 + Math.sin((lon - 60.0) * 0.2) * 1.2;
         const decay = Math.exp(-depthIdx * 0.35);
         const temp = surf * decay + 10.0 * (1.0 - decay);
@@ -138,15 +126,10 @@ function getFallbackSlice(variable: string, depthIdx: number): ModelSlice {
   };
 }
 
-/**
- * OceanDrapeLayer — Drapes the 2D temperature/salinity/currents/chlorophyll grid
- * directly onto the Cesium globe as a SingleTileImageryLayer over the Arabian Sea bbox.
- */
 export default function OceanDrapeLayer() {
   const { viewer } = useCesium();
   const currentLayerRef = useRef<Cesium.ImageryLayer | null>(null);
 
-  // Store selectors
   const allSlices = useOceanStore((s) => s.allSlices);
   const depthIndex = useOceanStore((s) => s.depthIndex);
   const modelSlice = useOceanStore((s) => s.modelSlice);
@@ -156,21 +139,17 @@ export default function OceanDrapeLayer() {
   const activePresetId = useOceanStore((s) => s.activePresetId);
   const colorPresets = useOceanStore((s) => s.colorPresets);
 
-  // Active slice with instant synthetic fallback
   const activeSlice = useMemo(() => {
     return allSlices[depthIndex] ?? modelSlice ?? getFallbackSlice(variable, depthIndex);
   }, [allSlices, depthIndex, modelSlice, variable]);
 
-  // Active color interpolator
   const interpolator = useMemo(
     () => getInterpolator(activePresetId, colorPresets),
     [activePresetId, colorPresets],
   );
 
-  // Effective min/max
   const effectiveMin = colorMin ?? activeSlice?.min_val ?? 0;
   const effectiveMax = colorMax ?? activeSlice?.max_val ?? 30;
-
 
   useEffect(() => {
     if (!viewer || viewer.isDestroyed() || !activeSlice || activeSlice.data.length === 0) {
@@ -192,13 +171,11 @@ export default function OceanDrapeLayer() {
 
         if (isCancelled || viewer.isDestroyed()) return;
 
-        // Create the imagery layer with smooth blending
         const newLayer = new Cesium.ImageryLayer(provider, {
           alpha: 0.88,
           rectangle: ARABIAN_SEA_RECTANGLE,
         });
 
-        // Safely remove previous drape layer to prevent texture/memory leaks
         if (currentLayerRef.current && !viewer.isDestroyed()) {
           viewer.imageryLayers.remove(currentLayerRef.current, true);
           currentLayerRef.current = null;
@@ -219,7 +196,6 @@ export default function OceanDrapeLayer() {
     };
   }, [viewer, activeSlice, effectiveMin, effectiveMax, interpolator]);
 
-  // Clean up layer when unmounting (e.g. switching back to volumetric mode)
   useEffect(() => {
     return () => {
       if (viewer && !viewer.isDestroyed() && currentLayerRef.current) {

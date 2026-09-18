@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import SceneViewer from './components/SceneViewer/SceneViewer';
+import OceanLeafletMap from './components/LeafletViewer/OceanLeafletMap';
+import PointInspectorPanel from './components/Inspector/PointInspectorPanel';
+import GoogleApiKeyModal from './components/common/GoogleApiKeyModal';
 import LayersPanel from './components/ControlsPanel/LayersPanel';
 import FloatProfileCard from './components/ProfileCard/FloatProfileCard';
 import ArgoFullProfileModal from './components/ProfileCard/ArgoFullProfileModal';
@@ -15,6 +18,7 @@ import { checkHealth } from './services/api';
 export default function App() {
   const [webgl2Supported, setWebgl2Supported] = useState<boolean>(() => isWebGL2Available());
   const showToast = useOceanStore((s) => s.showToast);
+  const viewMode = useOceanStore((s) => s.viewMode);
 
   useEffect(() => {
     let mounted = true;
@@ -23,7 +27,7 @@ export default function App() {
         await checkHealth();
       } catch (err) {
         if (!mounted) return;
-        // Backend health check logged silently; offline fallbacks handle gracefully
+
       }
     };
 
@@ -35,9 +39,7 @@ export default function App() {
     };
   }, [showToast]);
 
-
-
-  if (!webgl2Supported) {
+  if (!webgl2Supported && viewMode !== 'map2d') {
     return (
       <div className="app-container">
         <WebGL2Fallback onRetry={() => setWebgl2Supported(isWebGL2Available())} />
@@ -56,16 +58,21 @@ export default function App() {
         background: '#030712',
       }}
     >
-      {/* 100% Fullscreen 3D Cesium Ocean Scene */}
-      <SceneViewer />
 
-      {/* Floating Top-Left Layers Control Panel */}
+      {viewMode === 'map2d' ? (
+        <OceanLeafletMap />
+      ) : (
+        <SceneViewer />
+      )}
+
       <LayersPanel />
 
-      {/* Floating Top-Right Argo Float Profile Card */}
       <FloatProfileCard />
 
-      {/* Real Data Modals */}
+      <PointInspectorPanel />
+
+      <GoogleApiKeyModal />
+
       <ArgoFullProfileModal />
       <GliderProfileModal />
       <DataSourcesModal
@@ -73,7 +80,6 @@ export default function App() {
         onClose={() => useOceanStore.getState().setDataSourcesModalOpen(false)}
       />
 
-      {/* Standard utility overlays */}
       <LoadingOverlay />
       <ToastNotification />
       <OutreachGuide />

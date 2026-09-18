@@ -15,15 +15,6 @@ import { sharedPerformanceManager } from '../../utils/performanceManager';
 import { useOceanStore } from '../../stores/oceanStore';
 import { fetchArgoProfile, fetchModelProfile } from '../../services/api';
 
-/**
- * SceneViewer — Ocean-focused 3D Earth Globe powered by CesiumJS and Resium.
- * Styled matching the reference image:
- * - Oblique perspective of Indian Ocean & Arabian Sea
- * - 3D Ocean Cutaway Block with depth profiles
- * - Flowing surface current streamlines
- * - Argo Float & Glider markers
- * - Bottom-center horizontal legend & bottom-right mini-globe
- */
 export default function SceneViewer() {
   const viewerRef = useRef<CesiumComponentRef<CesiumViewer>>(null);
   const argoFloats = useOceanStore((s) => s.argoFloats);
@@ -35,8 +26,23 @@ export default function SceneViewer() {
   const setSelectedProfile = useOceanStore((s) => s.setSelectedProfile);
   const setModelProfile = useOceanStore((s) => s.setModelProfile);
   const setProfileOpen = useOceanStore((s) => s.setProfileOpen);
+  const googleApiKey = useOceanStore((s) => s.googleApiKey);
+  const selectedBasemap = useOceanStore((s) => s.selectedBasemap);
 
   const baseLayer = useMemo(() => {
+
+    if (selectedBasemap.startsWith('google')) {
+      const lyrs = selectedBasemap === 'google-satellite' ? 's' : selectedBasemap === 'google-terrain' ? 'p' : 'y';
+      const url = `https://mt{s}.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}${googleApiKey ? `&key=${googleApiKey}` : ''}`;
+      const provider = new Cesium.UrlTemplateImageryProvider({
+        url,
+        subdomains: ['0', '1', '2', '3'],
+        maximumLevel: 20,
+        credit: new Cesium.Credit('Google Earth / Google Maps Platform'),
+      });
+      return new Cesium.ImageryLayer(provider);
+    }
+
     return Cesium.ImageryLayer.fromProviderAsync(
       Cesium.ArcGisMapServerImageryProvider.fromUrl(
         'https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer',
@@ -47,7 +53,7 @@ export default function SceneViewer() {
         );
       })
     );
-  }, []);
+  }, [selectedBasemap, googleApiKey]);
 
   const terrainProvider = useMemo(() => new Cesium.EllipsoidTerrainProvider(), []);
 
@@ -73,7 +79,6 @@ export default function SceneViewer() {
     globe.translucency.frontFaceAlpha = 0.88;
     globe.translucency.backFaceAlpha = 0.88;
 
-
     globe.depthTestAgainstTerrain = false;
     globe.preloadAncestors = false;
     globe.preloadSiblings = false;
@@ -87,7 +92,6 @@ export default function SceneViewer() {
     scene.sun = undefined as unknown as Cesium.Sun;
     scene.moon = undefined as unknown as Cesium.Moon;
 
-    // --- Camera: tilted perspective matching reference image ---
     viewer.camera.setView({
       destination: Cesium.Cartesian3.fromDegrees(63.5, 3.5, 3800000),
       orientation: {
@@ -170,30 +174,25 @@ export default function SceneViewer() {
         fullscreenButton={false}
         homeButton={false}
       >
-        {/* In-situ Observation Markers */}
+
         {showArgoFloats && <ArgoMarkers />}
         <GliderMarkers />
         <CtdMarkers />
         <WaterBodyLabels />
 
-        {/* Ocean Surface Data Layer */}
         <OceanDrapeLayer />
 
-        {/* 3D Volumetric Ocean Cutaway Block with depth profiles */}
         {viewMode === 'volume' && <OceanCutawayBlock />}
 
-        {/* Flowing Surface Current Streamlines */}
         <CurrentStreamlines />
       </Viewer>
 
-      {/* Floating HTML Overlays matching reference image */}
       <HorizontalColorbar />
       <MiniGlobe />
       <PerformanceIndicator />
     </div>
   );
 }
-
 
 function PerformanceIndicator() {
   const [stats, setStats] = useState(() => sharedPerformanceManager.stats);
@@ -247,5 +246,3 @@ function PerformanceIndicator() {
     </div>
   );
 }
-
-

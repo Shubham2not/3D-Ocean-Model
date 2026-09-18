@@ -6,7 +6,7 @@ export default function LoadingOverlay() {
 
   return (
     <>
-      {/* Full-screen initial loading screen */}
+
       {isLoading && (
         <div
           style={{
@@ -23,7 +23,7 @@ export default function LoadingOverlay() {
             transition: 'opacity 0.5s ease',
           }}
         >
-          {/* Pulsing Ocean Icon */}
+
           <div
             style={{
               position: 'relative',
@@ -111,7 +111,6 @@ export default function LoadingOverlay() {
         </div>
       )}
 
-      {/* Subtle update pill when depth or time changes */}
       {!isLoading && isUpdating && (
         <div
           style={{

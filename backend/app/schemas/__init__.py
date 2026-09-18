@@ -1,6 +1,3 @@
-"""
-Schemas package for Ocean3D API.
-"""
 from app.schemas.model import (
     VariableInfo,
     VariablesResponse,

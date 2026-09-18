@@ -11,23 +11,20 @@ import type {
   GliderProfile,
   CtdStation,
   CurrentsVectorData,
+  PointDataResponse,
 } from '../services/api';
 
 export type ViewMode = 'volume' | 'slice' | 'map2d';
 
 interface OceanStore {
-  // Current selections
+
   variable: string;
   depthIndex: number;
   timeIndex: number;
-  /** The depth in metres for the highlighted slice in the 3D scene. Default 100 as in reference image. */
-  selectedDepth: number;
+    selectedDepth: number;
 
-  // Data
-  /** The slice for the currently selected depth (used for colorbar range etc.) */
-  modelSlice: ModelSlice | null;
-  /** All depth slices keyed by depth index — for the stacked 3D view */
-  allSlices: Record<number, ModelSlice>;
+    modelSlice: ModelSlice | null;
+    allSlices: Record<number, ModelSlice>;
   argoFloats: ArgoFloat[];
   gliders: Glider[];
   ctdStations: CtdStation[];
@@ -35,45 +32,42 @@ interface OceanStore {
   depths: DepthLevel[];
   timesteps: TimeStep[];
 
-  // Colorbar
   colorPresets: ColorPreset[];
   activePresetId: string;
   colorMin: number | null;
   colorMax: number | null;
 
-  // Argo profile popup
   selectedFloat: ArgoFloat | null;
   selectedProfile: ArgoProfile | null;
   modelProfile: ModelProfile | null;
   profileOpen: boolean;
 
-  // Playback
   isPlaying: boolean;
 
-  // Loading & Updating
   isLoading: boolean;
   isUpdating: boolean;
 
-  // Toast notifications
   toast: { message: string; type: 'error' | 'warning' | 'info' | 'success' } | null;
 
-  // Outreach Story Mode
   outreachMode: boolean;
 
-  // Layer Toggles & Mode Selection
-  /** View representation: 3D Volume, Depth Slice, or 2D Map */
-  viewMode: ViewMode;
-  /** Active temperature rendering representation */
-  temperatureMode: 'volumetric' | 'flat';
-  /** Whether Argo profiling float markers are shown on the globe */
-  showArgoFloats: boolean;
+    viewMode: ViewMode;
+    temperatureMode: 'volumetric' | 'flat';
+    showArgoFloats: boolean;
   showGliders: boolean;
   showCtdStations: boolean;
 
-  // Sidebar Layout
+  inspectedPoint: PointDataResponse | null;
+  isInspecting: boolean;
+  interpolationMethod: 'bilinear' | 'nearest';
+
+  selectedBasemap: string;
+  googleApiKey: string;
+  layerOpacity: number;
+  googleModalOpen: boolean;
+
   sidebarCollapsed: boolean;
 
-  // Actions
   setVariable: (v: string) => void;
   setDepthIndex: (d: number) => void;
   setTimeIndex: (t: number) => void;
@@ -83,10 +77,17 @@ interface OceanStore {
   setShowArgoFloats: (s: boolean) => void;
   setShowGliders: (s: boolean) => void;
   setShowCtdStations: (s: boolean) => void;
+  setSelectedBasemap: (b: string) => void;
+  setGoogleApiKey: (k: string) => void;
+  setLayerOpacity: (o: number) => void;
+  setGoogleModalOpen: (o: boolean) => void;
+  setInspectedPoint: (p: PointDataResponse | null) => void;
+  setIsInspecting: (i: boolean) => void;
+  setInterpolationMethod: (m: 'bilinear' | 'nearest') => void;
+  clearInspectedPoint: () => void;
   setModelSlice: (s: ModelSlice | null) => void;
   setAllSlices: (s: Record<number, ModelSlice>) => void;
-  /** Upsert a single slice into allSlices without replacing the whole map */
-  upsertSlice: (depthIdx: number, s: ModelSlice) => void;
+    upsertSlice: (depthIdx: number, s: ModelSlice) => void;
   setArgoFloats: (f: ArgoFloat[]) => void;
   setGliders: (g: Glider[]) => void;
   setCtdStations: (c: CtdStation[]) => void;
@@ -123,15 +124,28 @@ interface OceanStore {
 
 export const useOceanStore = create<OceanStore>((set) => ({
   variable: 'temperature',
-  depthIndex: 3, // 100m by default
+  depthIndex: 0, 
   timeIndex: 0,
-  selectedDepth: 100,
+  selectedDepth: 0,
 
-  viewMode: 'volume',
-  temperatureMode: 'volumetric',
+  viewMode: 'map2d',
+  temperatureMode: 'flat',
   showArgoFloats: true,
   showGliders: true,
   showCtdStations: false,
+
+  inspectedPoint: null,
+  isInspecting: false,
+  interpolationMethod: 'bilinear',
+
+  selectedBasemap: 'google-hybrid',
+  googleApiKey:
+    (typeof window !== 'undefined' && localStorage.getItem('ocean3d_google_api_key')) ||
+    (import.meta.env.VITE_GOOGLE_EARTH_API_KEY as string) ||
+    (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) ||
+    '',
+  layerOpacity: 0.78,
+  googleModalOpen: false,
 
   modelSlice: null,
   allSlices: {},
@@ -151,7 +165,6 @@ export const useOceanStore = create<OceanStore>((set) => ({
   colorMin: null,
   colorMax: null,
 
-  // Default selected float to match float #6903723 from reference image
   selectedFloat: {
     float_id: '6903723',
     lat: 12.4,
@@ -195,7 +208,7 @@ export const useOceanStore = create<OceanStore>((set) => ({
       { depth_m: 1000, depth_index: 7, temperature: 7.0 },
     ],
   },
-  profileOpen: true, // open by default as in reference image
+  profileOpen: true, 
 
   isPlaying: false,
   isLoading: false,
@@ -219,6 +232,19 @@ export const useOceanStore = create<OceanStore>((set) => ({
   setShowArgoFloats: (s) => set({ showArgoFloats: s }),
   setShowGliders: (s) => set({ showGliders: s }),
   setShowCtdStations: (s) => set({ showCtdStations: s }),
+  setSelectedBasemap: (b) => set({ selectedBasemap: b }),
+  setGoogleApiKey: (k) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ocean3d_google_api_key', k);
+    }
+    set({ googleApiKey: k });
+  },
+  setLayerOpacity: (o) => set({ layerOpacity: o }),
+  setGoogleModalOpen: (o) => set({ googleModalOpen: o }),
+  setInspectedPoint: (p) => set({ inspectedPoint: p }),
+  setIsInspecting: (i) => set({ isInspecting: i }),
+  setInterpolationMethod: (m) => set({ interpolationMethod: m }),
+  clearInspectedPoint: () => set({ inspectedPoint: null, isInspecting: false }),
   setModelSlice: (s) => set({ modelSlice: s }),
   setAllSlices: (s) => set({ allSlices: s }),
   upsertSlice: (depthIdx, s) =>
@@ -256,6 +282,3 @@ export const useOceanStore = create<OceanStore>((set) => ({
   gliderModalOpen: false,
   setGliderModalOpen: (o) => set({ gliderModalOpen: o }),
 }));
-
-
-

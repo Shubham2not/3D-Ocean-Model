@@ -1,6 +1,3 @@
-/**
- * performanceManager.ts — Lightweight real-time frame rate and WebGL performance monitor.
- */
 
 export interface PerformanceStats {
   fps: number;
@@ -46,7 +43,7 @@ export class PerformanceManager {
           }
         }
       } catch {
-        // Ignore extension restrictions
+
       }
     }
 

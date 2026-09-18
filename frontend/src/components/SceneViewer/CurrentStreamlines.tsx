@@ -3,25 +3,14 @@ import { Entity } from 'resium';
 import * as Cesium from 'cesium';
 import { useOceanStore } from '../../stores/oceanStore';
 
-/**
- * CurrentStreamlines — Renders ocean current flow streamlines across the
- * Arabian Sea and Indian Ocean, matching the swirling white/cyan current vectors
- * seen in the reference image.
- *
- * Streamlines follow the anticyclonic gyre centered near 67°E, 14°N and the
- * coastal western boundary current (Somali / Oman jet).
- */
 export default function CurrentStreamlines() {
   const variable = useOceanStore((s) => s.variable);
 
-
-  // Generate realistic curved streamline paths across Arabian Sea
   const streamlinePaths = useMemo(() => {
     const paths: Cesium.Cartesian3[][] = [];
     const centerLon = 67.0;
     const centerLat = 13.5;
 
-    // 1. Gyre elliptical streamlines (rings with outward spiral & noise)
     const ringRadii = [2.2, 3.6, 5.0, 6.5, 8.0, 9.5];
     ringRadii.forEach((r, rIdx) => {
       const numSegments = 40 + rIdx * 8;
@@ -31,13 +20,12 @@ export default function CurrentStreamlines() {
 
       for (let i = 0; i <= numSegments; i++) {
         const theta = startAngle + (i / numSegments) * sweep;
-        // Elliptical shape matching Arabian Sea basin
+
         const lon = centerLon + r * 1.25 * Math.cos(theta) - 0.2 * Math.sin(2 * theta);
         const lat = centerLat + r * 0.9 * Math.sin(theta);
 
-        // Keep within ocean bounds
         if (lon >= 58 && lon <= 75.5 && lat >= 5.5 && lat <= 24.5) {
-          // Subtle height above ellipsoid so it sits cleanly on water surface
+
           points.push(Cesium.Cartesian3.fromDegrees(lon, lat, 150));
         }
       }
@@ -46,7 +34,6 @@ export default function CurrentStreamlines() {
       }
     });
 
-    // 2. Somali / Western boundary northward coastal jet streamlines
     for (let offset = 0; offset < 5; offset++) {
       const jetPoints: Cesium.Cartesian3[] = [];
       const baseLon = 59.5 + offset * 0.8;
@@ -61,7 +48,6 @@ export default function CurrentStreamlines() {
       }
     }
 
-    // 3. Southwest Monsoon Drift eastward streamlines across southern basin
     for (let row = 0; row < 4; row++) {
       const driftPoints: Cesium.Cartesian3[] = [];
       const baseLat = 6.5 + row * 1.8;
@@ -77,7 +63,6 @@ export default function CurrentStreamlines() {
     return paths;
   }, []);
 
-  // Show streamlines in all modes or emphasize when Currents is selected
   const isCurrentsActive = variable === 'currents';
   const alpha = isCurrentsActive ? 0.95 : 0.65;
   const width = isCurrentsActive ? 2.8 : 1.8;
@@ -95,8 +80,8 @@ export default function CurrentStreamlines() {
               taperPower: 0.4,
               color: Cesium.Color.fromCssColorString(
                 idx % 2 === 0
-                  ? `rgba(224, 242, 254, ${alpha})` // luminous cyan-white
-                  : `rgba(56, 189, 248, ${alpha})`  // sky blue
+                  ? `rgba(224, 242, 254, ${alpha})` 
+                  : `rgba(56, 189, 248, ${alpha})`  
               ),
             }),
             clampToGround: false,

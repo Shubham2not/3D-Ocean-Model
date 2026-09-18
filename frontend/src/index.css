@@ -1,47 +1,36 @@
 @import "tailwindcss";
 
-/* ============================================
-   Ocean3D — Premium Dark Theme Stylesheet
-   ============================================ */
-
-/* --- CSS Custom Properties --- */
 :root {
-  /* Ocean palette */
+
   --ocean-deep: #0a0e1a;
   --ocean-dark: #0f172a;
   --ocean-mid: #1e293b;
   --ocean-light: #334155;
   --ocean-surface: #475569;
 
-  /* Accent colors */
   --accent-teal: #4ecdc4;
   --accent-blue: #44a8f7;
   --accent-orange: #ff6b35;
   --accent-purple: #a78bfa;
   --accent-green: #34d399;
 
-  /* Gradients */
   --grad-teal-blue: linear-gradient(135deg, #4ecdc4, #44a8f7);
   --grad-ocean: linear-gradient(180deg, #0f172a 0%, #0a1628 50%, #070d1a 100%);
   --grad-panel: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 14, 26, 0.98) 100%);
 
-  /* Glass */
   --glass-bg: rgba(15, 23, 42, 0.75);
   --glass-border: rgba(78, 205, 196, 0.15);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 
-  /* Text */
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
 
-  /* Sizing */
   --panel-width: 340px;
   --border-radius: 12px;
   --transition-speed: 0.3s;
 }
 
-/* --- Base Reset --- */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -58,7 +47,6 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
-/* --- App Layout --- */
 .app-container {
   display: flex;
   width: 100%;
@@ -66,7 +54,6 @@ html, body, #root {
   background: var(--grad-ocean);
 }
 
-/* --- Scene Viewer --- */
 .scene-viewer {
   width: 100%;
   height: 100%;
@@ -107,7 +94,6 @@ html, body, #root {
   animation: pulse 2s ease-in-out infinite;
 }
 
-/* --- Controls Panel --- */
 .controls-panel {
   width: var(--panel-width);
   min-width: var(--panel-width);
@@ -124,7 +110,6 @@ html, body, #root {
   animation: slideInLeft 0.5s ease-out;
   transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
 
-  /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: var(--ocean-light) transparent;
 }
@@ -140,7 +125,6 @@ html, body, #root {
   pointer-events: none;
 }
 
-
 .controls-panel::-webkit-scrollbar {
   width: 4px;
 }
@@ -154,7 +138,6 @@ html, body, #root {
   border-radius: 4px;
 }
 
-/* Header */
 .controls-header {
   padding: 20px 20px 16px;
   border-bottom: 1px solid rgba(78, 205, 196, 0.1);
@@ -185,7 +168,6 @@ html, body, #root {
   font-weight: 500;
 }
 
-/* Control Groups */
 .control-group {
   padding: 14px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
@@ -218,7 +200,6 @@ html, body, #root {
   border-radius: 6px;
 }
 
-/* Select */
 .control-select {
   width: 100%;
   padding: 10px 14px;
@@ -251,7 +232,6 @@ html, body, #root {
   color: var(--text-primary);
 }
 
-/* Slider */
 .control-slider {
   width: 100%;
   height: 6px;
@@ -298,7 +278,6 @@ html, body, #root {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Playback Controls */
 .playback-controls {
   display: flex;
   gap: 8px;
@@ -347,7 +326,6 @@ html, body, #root {
   animation: glowPulse 2s ease-in-out infinite;
 }
 
-/* Palette Grid */
 .palette-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -390,7 +368,6 @@ html, body, #root {
   font-weight: 500;
 }
 
-/* Range Inputs */
 .range-inputs {
   display: flex;
   gap: 8px;
@@ -449,7 +426,6 @@ html, body, #root {
   color: var(--accent-teal);
 }
 
-/* Colorbar Preview */
 .colorbar-preview {
   padding: 4px 0;
 }
@@ -469,7 +445,6 @@ html, body, #root {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* Loading */
 .loading-indicator {
   display: flex;
   align-items: center;
@@ -489,7 +464,6 @@ html, body, #root {
   animation: spin 0.8s linear infinite;
 }
 
-/* Footer */
 .controls-footer {
   margin-top: auto;
   padding: 16px 20px;
@@ -505,7 +479,6 @@ html, body, #root {
   font-family: 'JetBrains Mono', monospace;
 }
 
-/* --- Profile Chart Panel --- */
 .profile-overlay {
   position: fixed;
   top: 0;
@@ -637,7 +610,6 @@ html, body, #root {
   text-transform: capitalize;
 }
 
-/* --- Animations --- */
 @keyframes fadeSlideIn {
   from {
     opacity: 0;
@@ -686,7 +658,6 @@ html, body, #root {
   }
 }
 
-/* --- Responsive --- */
 @media (max-width: 1024px) {
   :root {
     --panel-width: 300px;
@@ -746,9 +717,6 @@ html, body, #root {
   }
 }
 
-/* --- Cesium 3D Globe Overrides — Ocean Data Tool --- */
-
-/* Full-bleed canvas container */
 .scene-viewer .cesium-viewer,
 .scene-viewer .cesium-viewer-cesiumWidgetContainer,
 .scene-viewer .cesium-widget,
@@ -758,7 +726,6 @@ html, body, #root {
   touch-action: none;
 }
 
-/* Minimise credit attribution — keep legal text but tuck it away */
 .cesium-widget-credits {
   font-size: 9px !important;
   opacity: 0.35 !important;
@@ -772,7 +739,7 @@ html, body, #root {
 }
 
 .cesium-credit-logoContainer {
-  display: none !important;  /* hide the Cesium ion logo */
+  display: none !important;  
 }
 
 .cesium-credit-textContainer {
@@ -786,7 +753,6 @@ html, body, #root {
   text-decoration: none !important;
 }
 
-/* Hide any remaining Cesium toolbar/button chrome */
 .cesium-viewer-toolbar,
 .cesium-viewer-animationContainer,
 .cesium-viewer-timelineContainer,
@@ -798,14 +764,12 @@ html, body, #root {
   display: none !important;
 }
 
-/* Remove the info box popup */
 .cesium-infoBox,
 .cesium-infoBox-iframe,
 .cesium-selection-wrapper {
   display: none !important;
 }
 
-/* Cinematic vignette overlay — darkens edges for an ocean-depth feel */
 .scene-viewer::after {
   content: '';
   position: absolute;
@@ -820,9 +784,6 @@ html, body, #root {
   );
 }
 
-/* ============================================
-   Layers Panel & Layer Switcher
-   ============================================ */
 .layers-list {
   display: flex;
   flex-direction: column;
@@ -878,7 +839,6 @@ html, body, #root {
   color: #94a3b8;
 }
 
-/* Radio button style */
 .custom-radio {
   width: 16px;
   height: 16px;
@@ -908,7 +868,6 @@ html, body, #root {
   background: var(--accent-teal);
 }
 
-/* Checkbox style */
 .custom-checkbox {
   width: 16px;
   height: 16px;
@@ -935,7 +894,6 @@ html, body, #root {
   line-height: 1;
 }
 
-/* Badges */
 .layer-badge {
   font-size: 9px;
   font-weight: 700;
@@ -961,4 +919,61 @@ html, body, #root {
   color: #ff8c5a;
 }
 
+.leaflet-popup.ocean-glass-popup .leaflet-popup-content-wrapper {
+  background: rgba(10, 18, 36, 0.92) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.8), 0 0 15px rgba(56, 189, 248, 0.15) !important;
+  padding: 0 !important;
+}
 
+.leaflet-popup.ocean-glass-popup .leaflet-popup-tip {
+  background: rgba(10, 18, 36, 0.92) !important;
+  border-right: 1px solid rgba(56, 189, 248, 0.35) !important;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.35) !important;
+}
+
+.leaflet-popup.ocean-glass-popup .leaflet-popup-content {
+  margin: 0 !important;
+  line-height: inherit !important;
+}
+
+.leaflet-popup.ocean-glass-popup .leaflet-popup-close-button {
+  top: 8px !important;
+  right: 8px !important;
+  color: #94a3b8 !important;
+  font-size: 16px !important;
+}
+
+.leaflet-popup.ocean-glass-popup .leaflet-popup-close-button:hover {
+  color: #ffffff !important;
+}
+
+.leaflet-tooltip.ocean-glass-tooltip {
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+  padding: 4px 8px !important;
+}
+
+.leaflet-tooltip.ocean-glass-tooltip::before {
+  border-top-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.3);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.6);
+}

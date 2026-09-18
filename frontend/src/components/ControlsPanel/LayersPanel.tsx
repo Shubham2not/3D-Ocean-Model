@@ -11,10 +11,6 @@ import {
   fetchColorPresets,
 } from '../../services/api';
 
-/**
- * LayersPanel — Floating left-hand control panel redesigned strictly
- * according to the reference image.
- */
 export default function LayersPanel() {
   const {
     variable, setVariable,
@@ -37,16 +33,15 @@ export default function LayersPanel() {
     showGliders, setShowGliders,
     showCtdStations, setShowCtdStations,
     setDataSourcesModalOpen,
+    googleApiKey,
+    setGoogleModalOpen,
   } = useOceanStore();
-
 
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [obsDropdownOpen, setObsDropdownOpen] = useState(true);
 
-  // Discrete depth values mapping: 0, 25, 50, 100, 200, 500, 1000
   const depthValues = [0, 25, 50, 100, 200, 500, 1000];
 
-  // Fetch initial instruments and metadata
   useEffect(() => {
     (async () => {
       try {
@@ -72,7 +67,6 @@ export default function LayersPanel() {
     })();
   }, [setTimesteps, setDepths, setColorPresets, setArgoFloats, setGliders, setCtdStations, setCurrentsVectors]);
 
-  // Fetch slice data whenever variable, depth, or time changes
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -80,7 +74,7 @@ export default function LayersPanel() {
         const slice = await fetchModelData(variable, depthIndex, timeIndex);
         if (!cancelled && slice) {
           setModelSlice(slice);
-          // Also pre-fetch all depth slices for true 3D volume stack
+
           const dCount = depths.length > 0 ? depths.length : 7;
           const slicePromises = Array.from({ length: dCount }, (_, i) =>
             fetchModelData(variable, i, timeIndex).catch(() => null)
@@ -103,10 +97,9 @@ export default function LayersPanel() {
     };
   }, [variable, depthIndex, timeIndex, depths.length, setModelSlice, setAllSlices]);
 
-  // Handle Depth Slider changes
   const handleDepthSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = parseInt(e.target.value, 10);
-    // Find closest discrete depth level
+
     let closestIdx = 0;
     let minDiff = Infinity;
     depthValues.forEach((d, idx) => {
@@ -120,7 +113,6 @@ export default function LayersPanel() {
     setDepthIndex(closestIdx);
   };
 
-  // Playback timer loop
   useEffect(() => {
     if (!isPlaying) return;
     const interval = setInterval(() => {
@@ -130,7 +122,6 @@ export default function LayersPanel() {
     return () => clearInterval(interval);
   }, [isPlaying, timeIndex, timesteps.length, setTimeIndex]);
 
-  // Current timestamp string formatted nicely
   const formattedTime = timesteps[timeIndex]?.label
     ? timesteps[timeIndex].label.replace('T', ' ').slice(0, 16)
     : '2024-09-15 12:00';
@@ -149,7 +140,7 @@ export default function LayersPanel() {
         userSelect: 'none',
       }}
     >
-      {/* ━━━ Brand Header ━━━ */}
+
       <div
         style={{
           display: 'flex',
@@ -157,7 +148,7 @@ export default function LayersPanel() {
           gap: 12,
         }}
       >
-        {/* 3 Wave cyan logo */}
+
         <svg
           width="36"
           height="36"
@@ -198,7 +189,6 @@ export default function LayersPanel() {
         </div>
       </div>
 
-      {/* ━━━ Floating Layers Card ━━━ */}
       <div
         id="layers-card"
         style={{
@@ -215,36 +205,59 @@ export default function LayersPanel() {
           gap: 16,
         }}
       >
-        {/* Card Header: Layers + Real Data Badge */}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>
             Layers
           </div>
-          <button
-            id="open-data-sources-btn"
-            onClick={() => setDataSourcesModalOpen(true)}
-            style={{
-              background: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              borderRadius: 12,
-              padding: '2px 8px',
-              fontSize: 10,
-              fontWeight: 700,
-              color: '#34d399',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              transition: 'all 0.2s',
-            }}
-            title="Click to view real INCOIS LAS, Ifremer Argo GDAC & SeaNoe data sources"
-          >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399' }} />
-            Real Data Active
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              id="open-google-earth-btn"
+              onClick={() => setGoogleModalOpen(true)}
+              style={{
+                background: googleApiKey ? 'rgba(16, 185, 129, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                border: googleApiKey ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(56, 189, 248, 0.4)',
+                borderRadius: 12,
+                padding: '2px 8px',
+                fontSize: 10,
+                fontWeight: 700,
+                color: googleApiKey ? '#34d399' : '#38bdf8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                transition: 'all 0.2s',
+              }}
+              title="Configure Google Earth API Key (Applies to both 2D map and 3D globe)"
+            >
+              <span>🌍</span>
+              <span>{googleApiKey ? 'Google Key' : 'Google Earth'}</span>
+            </button>
+            <button
+              id="open-data-sources-btn"
+              onClick={() => setDataSourcesModalOpen(true)}
+              style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                borderRadius: 12,
+                padding: '2px 8px',
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#34d399',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                transition: 'all 0.2s',
+              }}
+              title="Click to view real INCOIS LAS, Ifremer Argo GDAC & SeaNoe data sources"
+            >
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399' }} />
+              Real Data
+            </button>
+          </div>
         </div>
 
-        {/* Ocean Model Dropdown */}
         <div>
           <div
             id="ocean-model-dropdown"
@@ -312,9 +325,8 @@ export default function LayersPanel() {
           )}
         </div>
 
-        {/* ── Variables Checkbox List ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {/* Temperature */}
+
           <div
             onClick={() => setVariable('temperature')}
             style={{
@@ -351,7 +363,7 @@ export default function LayersPanel() {
                 Temperature (°C)
               </span>
             </div>
-            {/* Color gradient preview icon */}
+
             <div
               style={{
                 width: 28,
@@ -363,7 +375,6 @@ export default function LayersPanel() {
             />
           </div>
 
-          {/* Salinity */}
           <div
             onClick={() => setVariable('salinity')}
             style={{
@@ -400,14 +411,13 @@ export default function LayersPanel() {
                 Salinity (PSU)
               </span>
             </div>
-            {/* Salinity streamline icon */}
+
             <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="#38bdf8" strokeWidth="2">
               <path d="M1 6 Q 6 1, 12 6 T 23 6" />
               <polyline points="19 3 23 6 19 9" />
             </svg>
           </div>
 
-          {/* Currents */}
           <div
             onClick={() => setVariable('currents')}
             style={{
@@ -444,14 +454,13 @@ export default function LayersPanel() {
                 Currents
               </span>
             </div>
-            {/* Horizontal flow arrow */}
+
             <svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="#38bdf8" strokeWidth="2">
               <line x1="2" y1="6" x2="20" y2="6" />
               <polyline points="16 2 21 6 16 10" />
             </svg>
           </div>
 
-          {/* Chlorophyll */}
           <div
             onClick={() => setVariable('chlorophyll')}
             style={{
@@ -488,7 +497,7 @@ export default function LayersPanel() {
                 Chlorophyll (mg/m³)
               </span>
             </div>
-            {/* Marine whale tail / leaf icon */}
+
             <svg width="22" height="14" viewBox="0 0 24 16" fill="none" stroke="#38bdf8" strokeWidth="2">
               <path d="M12 14 C12 7, 2 3, 2 3 C6 7, 10 9, 12 14 Z" fill="rgba(56, 189, 248, 0.4)" />
               <path d="M12 14 C12 7, 22 3, 22 3 C18 7, 14 9, 12 14 Z" fill="rgba(56, 189, 248, 0.4)" />
@@ -496,7 +505,6 @@ export default function LayersPanel() {
           </div>
         </div>
 
-        {/* ── Observations Dropdown ── */}
         <div>
           <div
             onClick={() => setObsDropdownOpen(!obsDropdownOpen)}
@@ -516,7 +524,7 @@ export default function LayersPanel() {
 
           {obsDropdownOpen && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 2 }}>
-              {/* Argo Floats */}
+
               <div
                 onClick={() => setShowArgoFloats(!showArgoFloats)}
                 style={{
@@ -545,7 +553,7 @@ export default function LayersPanel() {
                   </div>
                   <span style={{ fontSize: 13, color: '#cbd5e1' }}>Argo Floats</span>
                 </div>
-                {/* Yellow circle */}
+
                 <span
                   style={{
                     width: 9,
@@ -558,7 +566,6 @@ export default function LayersPanel() {
                 />
               </div>
 
-              {/* Gliders */}
               <div
                 onClick={() => setShowGliders(!showGliders)}
                 style={{
@@ -587,7 +594,7 @@ export default function LayersPanel() {
                   </div>
                   <span style={{ fontSize: 13, color: '#cbd5e1' }}>Gliders</span>
                 </div>
-                {/* White/cyan triangle */}
+
                 <span
                   style={{
                     width: 0,
@@ -601,7 +608,6 @@ export default function LayersPanel() {
                 />
               </div>
 
-              {/* CTD Stations */}
               <div
                 onClick={() => setShowCtdStations(!showCtdStations)}
                 style={{
@@ -630,7 +636,7 @@ export default function LayersPanel() {
                   </div>
                   <span style={{ fontSize: 13, color: '#cbd5e1' }}>CTD Stations</span>
                 </div>
-                {/* Cyan diamond */}
+
                 <span
                   style={{
                     width: 8,
@@ -646,15 +652,14 @@ export default function LayersPanel() {
           )}
         </div>
 
-        {/* ── View Section (Radio Buttons) ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#cbd5e1' }}>View</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: 2 }}>
-            {(['volume', 'slice', 'map2d'] as ViewMode[]).map((mode) => {
+            {(['map2d', 'volume', 'slice'] as ViewMode[]).map((mode) => {
               const labels: Record<ViewMode, string> = {
-                volume: '3D Volume',
-                slice: 'Depth Slice',
-                map2d: '2D Map',
+                map2d: '2D Map (Leaflet)',
+                volume: '3D Globe (Cesium)',
+                slice: 'Depth Slice (3D)',
               };
               const isSelected = viewMode === mode;
               return (
@@ -705,7 +710,6 @@ export default function LayersPanel() {
           </div>
         </div>
 
-        {/* ── Depth (m) Slider ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div
             style={{
@@ -715,7 +719,7 @@ export default function LayersPanel() {
             }}
           >
             <span style={{ fontSize: 13, fontWeight: 600, color: '#cbd5e1' }}>Depth (m)</span>
-            {/* Value Badge e.g. 100 */}
+
             <div
               style={{
                 background: 'rgba(15, 23, 42, 0.8)',
@@ -746,7 +750,6 @@ export default function LayersPanel() {
           />
         </div>
 
-        {/* ── Time Section ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#cbd5e1' }}>Time</div>
           <div
@@ -756,7 +759,7 @@ export default function LayersPanel() {
               gap: 8,
             }}
           >
-            {/* Play Button */}
+
             <button
               onClick={() => setIsPlaying(!isPlaying)}
               style={{
@@ -777,7 +780,6 @@ export default function LayersPanel() {
               {isPlaying ? '⏸' : '▶'}
             </button>
 
-            {/* Next Step Button */}
             <button
               onClick={() => {
                 const maxT = timesteps.length > 0 ? timesteps.length - 1 : 4;
@@ -801,7 +803,6 @@ export default function LayersPanel() {
               ▶|
             </button>
 
-            {/* Timestamp text pill */}
             <div
               style={{
                 flex: 1,
@@ -819,7 +820,6 @@ export default function LayersPanel() {
             </div>
           </div>
 
-          {/* Time Scrubber Slider */}
           <input
             type="range"
             min={0}

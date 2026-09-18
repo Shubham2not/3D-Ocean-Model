@@ -1,17 +1,8 @@
-"""
-Ocean3D — Synthetic Argo Float Data Generator
-
-Produces ~12 synthetic Argo floats positioned in the Arabian Sea region,
-each with realistic depth-temperature profiles matching the Argo data schema
-from the SIH brief (sections 10-11).
-"""
-
 import numpy as np
 from typing import Dict, Any, List
 
 np.random.seed(123)
 
-# Float positions scattered across the Arabian Sea
 _FLOAT_DEFINITIONS = [
     {"id": "2902150", "lat": 12.5,  "lon": 65.3,  "deploy_date": "2025-06-15"},
     {"id": "2902151", "lat": 15.8,  "lon": 68.7,  "deploy_date": "2025-07-22"},
@@ -27,24 +18,21 @@ _FLOAT_DEFINITIONS = [
     {"id": "2902161", "lat": 19.5,  "lon": 73.1,  "deploy_date": "2025-08-29"},
 ]
 
-
 def _generate_profile(lat: float, cycle: int) -> Dict[str, Any]:
     """Generate a single depth-vs-temperature profile for an Argo float."""
-    # Standard Argo profile depths (pressure in dbar ≈ depth in meters)
+
     depths = [5, 10, 20, 30, 50, 75, 100, 150, 200, 300, 400, 500,
               600, 800, 1000, 1200, 1500, 1800, 2000]
 
-    # Surface temp depends on latitude (warmer near equator)
     surface_temp = 30.0 - (lat - 5.0) * 0.2 + np.random.normal(0, 0.3)
 
-    # Small variation per cycle
     surface_temp += 0.2 * np.sin(cycle * 0.5)
 
     temperatures = []
     salinities = []
 
     for d in depths:
-        # Temperature profile with thermocline
+
         if d <= 50:
             temp = surface_temp - (d / 50.0) * 1.0
         elif d <= 500:
@@ -58,7 +46,6 @@ def _generate_profile(lat: float, cycle: int) -> Dict[str, Any]:
         temp += np.random.normal(0, 0.1)
         temperatures.append(round(float(temp), 3))
 
-        # Salinity profile (typical Arabian Sea)
         if d <= 100:
             sal = 36.0 + (d / 100.0) * 0.5
         elif d <= 500:
@@ -71,11 +58,10 @@ def _generate_profile(lat: float, cycle: int) -> Dict[str, Any]:
 
     return {
         "depths": depths,
-        "pressure_dbar": depths,  # ~1:1 ratio
+        "pressure_dbar": depths,
         "temperature": temperatures,
         "salinity": salinities,
     }
-
 
 def generate_argo_floats() -> Dict[str, Any]:
     """
@@ -89,7 +75,7 @@ def generate_argo_floats() -> Dict[str, Any]:
     profiles = {}
 
     for fdef in _FLOAT_DEFINITIONS:
-        num_cycles = np.random.randint(1, 4)  # 1–3 cycles per float
+        num_cycles = np.random.randint(1, 4)
 
         float_meta = {
             "float_id": fdef["id"],
@@ -113,10 +99,7 @@ def generate_argo_floats() -> Dict[str, Any]:
 
     return {"floats": floats, "profiles": profiles}
 
-
-# Pre-generate and cache on import
 _ARGO_DATA = None
-
 
 def get_argo_data() -> Dict[str, Any]:
     """Get the cached synthetic Argo dataset (generated once on first call)."""

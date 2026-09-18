@@ -3,17 +3,12 @@ import * as Cesium from 'cesium';
 import { useOceanStore } from '../../stores/oceanStore';
 import { fetchGliderProfile } from '../../services/api';
 
-// SVG triangle for glider marker
 const gliderSvg = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
     <polygon points="12,2 22,22 2,22" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2"/>
   </svg>
 `)}`;
 
-/**
- * GliderMarkers — Renders autonomous deep-sea gliders matching the
- * white/cyan triangle "▲ Glider" marker seen in the reference image.
- */
 export default function GliderMarkers() {
   const showGliders = useOceanStore((s) => s.showGliders);
   const gliders = useOceanStore((s) => s.gliders);

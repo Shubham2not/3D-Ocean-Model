@@ -49,7 +49,7 @@ export default function DataSourcesModal({ isOpen, onClose }: Props) {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+
         <div
           style={{
             display: 'flex',
@@ -91,7 +91,6 @@ export default function DataSourcesModal({ isOpen, onClose }: Props) {
           </button>
         </div>
 
-        {/* Active Engine Badge */}
         {dataSources && (
           <div
             style={{
@@ -128,7 +127,6 @@ export default function DataSourcesModal({ isOpen, onClose }: Props) {
           </div>
         )}
 
-        {/* Section 1: Numerical Ocean Model Outputs */}
         <div style={{ marginBottom: 20 }}>
           <h4 style={{ margin: '0 0 10px', fontSize: 13, textTransform: 'uppercase', color: '#38bdf8', letterSpacing: '0.8px' }}>
             a. Numerical Ocean Model Outputs
@@ -168,7 +166,6 @@ export default function DataSourcesModal({ isOpen, onClose }: Props) {
           </div>
         </div>
 
-        {/* Section 2: Argo Global Data */}
         <div style={{ marginBottom: 20 }}>
           <h4 style={{ margin: '0 0 10px', fontSize: 13, textTransform: 'uppercase', color: '#38bdf8', letterSpacing: '0.8px' }}>
             b. Argo Global Observational Data
@@ -205,7 +202,6 @@ export default function DataSourcesModal({ isOpen, onClose }: Props) {
           </div>
         </div>
 
-        {/* Section 3: Glider Data */}
         <div style={{ marginBottom: 20 }}>
           <h4 style={{ margin: '0 0 10px', fontSize: 13, textTransform: 'uppercase', color: '#38bdf8', letterSpacing: '0.8px' }}>
             c. Deep-Sea Glider Data
@@ -242,7 +238,6 @@ export default function DataSourcesModal({ isOpen, onClose }: Props) {
           </div>
         </div>
 
-        {/* Section 4: In-situ Collections */}
         <div style={{ marginBottom: 12 }}>
           <h4 style={{ margin: '0 0 10px', fontSize: 13, textTransform: 'uppercase', color: '#38bdf8', letterSpacing: '0.8px' }}>
             d. Collection of In-Situ Data

@@ -1,8 +1,3 @@
-/**
- * Check if WebGL2 is supported by the current browser and device.
- * Also supports forcing WebGL2 off via URL query parameter `?webgl2=0` or `?nowebgl2=1`
- * or window.__FORCE_DISABLE_WEBGL2__ for devtools testing and capability verification.
- */
 export function isWebGL2Available(): boolean {
   try {
     if (typeof window !== 'undefined') {
@@ -30,10 +25,6 @@ interface WebGL2FallbackProps {
   onRetry?: () => void;
 }
 
-/**
- * WebGL2Fallback — clear, prominent fallback UI rendered when WebGL2 is unavailable.
- * Prevents silent crashes and guides users on how to enable hardware acceleration.
- */
 export default function WebGL2Fallback({ onRetry }: WebGL2FallbackProps) {
   return (
     <div
@@ -172,7 +163,7 @@ export default function WebGL2Fallback({ onRetry }: WebGL2FallbackProps) {
           )}
           <button
             onClick={() => {
-              // Remove testing query params if present
+
               const url = new URL(window.location.href);
               url.searchParams.delete('webgl2');
               url.searchParams.delete('nowebgl2');
