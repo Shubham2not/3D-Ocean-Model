@@ -32,7 +32,10 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-  },
+  },  
+  preview: {
+    allowedHosts:['threed-ocean-model.onrender.com']
+  }
 })
 
 
