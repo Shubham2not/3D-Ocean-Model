@@ -33,9 +33,6 @@ export default defineConfig({
       },
     },
   },  
-  preview: {
-    allowedHosts:['threed-ocean-model.onrender.com']
-  }
 })
 
 
